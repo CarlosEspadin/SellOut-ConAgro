@@ -199,6 +199,7 @@ class App(tk.Tk):
         
         self.ruta_entry = ttk.Entry(self, validate="key", validatecommand=(self.validar_ruta_archivo, "%P"), textvariable=v1, **entry_font)
         self.ruta_entry.grid(row=0, column=2)
+        self.ruta_entry.config(width=40)
         
         # Número de distribuidor.
         distri_label = ttk.Label(self, text="Ingresa el Número de cliente:")
@@ -206,6 +207,7 @@ class App(tk.Tk):
         
         self.distri_entry = ttk.Entry(self, validate="key", validatecommand=(self.validar_ruta_archivo, "%P"), textvariable=v2, **entry_font)
         self.distri_entry.grid(row=1, column=2)
+        self.distri_entry.config(width=40)
         
         # Botones adicionales
         self.B1 = ttk.Button(self, text="Insertar", command=self.obtener_ruta)
@@ -221,6 +223,11 @@ class App(tk.Tk):
         self.style = ttk.Style(self)
         self.style.configure('TLabel', font=('Helvetica', 11))
         self.style.configure('TButton', font=('Helvetica', 11)) 
+        
+        # configure icon
+        self.icon_big = tk.PhotoImage(file="C:\\Users\\carlo\\OneDrive\\Documentos\\SellOut ConAgro\\Icons\\ConAgro_icon_big.png")
+        self.icon_small = tk.PhotoImage(file="C:\\Users\\carlo\\OneDrive\\Documentos\\SellOut ConAgro\\Icons\\ConAgro_icon_small.png")
+        self.iconphoto(False, self.icon_big, self.icon_small)
     # Método para cerrar la venta App.
     def cerrar_ventana(self):
         self.destroy()
@@ -289,7 +296,7 @@ class App(tk.Tk):
         else:
             self.msj_webservice(response.text)
         return response.text
-    # Función para convertir los datos de Sell Out en Json con el formato ConAgro.
+    # Función para convertir los datos de Sell Out en Json con el formato ConAgro. 
     def json_conver(self,ruta, df, name_distri, num_distri, short):
         # Convertir DataFrame a JSON
         global json_data
