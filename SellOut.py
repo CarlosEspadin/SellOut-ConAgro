@@ -11,6 +11,7 @@ import tkinter as tk
 from tkinter import *
 from tkinter import messagebox
 from tkinter import ttk
+import traceback
 import sys
 import time
 
@@ -23,6 +24,9 @@ import time
 ##  Nombre de distribuidor: Nombre del distribuidor.
 
 class Distribuidor:
+    Mes = {'Mes': list(range(1, 13)), 'Num': [str(i).zfill(2) for i in range(1, 13)]}
+    df_Mes = pd.DataFrame(Mes)
+    
     def __init__(self, v_Num_Distri, v_ruta, Columnas):
         self.ruta = v_ruta
         self.Num_Distri = v_Num_Distri
@@ -33,10 +37,12 @@ class Distribuidor:
         return [str(random.randint(0, 99)) + str(random.randint(0, 99)) for _ in range(n)]
     
     # Método de limpieza para Ecuaquimica.
-    def Ecuaqui_Clean(self, distribuidor, Columnas):
-        Mes = {'Mes': list(range(1, 13)), 'Num': [str(i).zfill(2) for i in range(1, 13)]}
-        df_Mes = pd.DataFrame(Mes)
+    def Ecuaqui_Clean(self, distribuidor, Columnas):        
+        # sourcery skip: class-extract-method
         distribuidor['folio'] = ""
+        # Casteamos y redondeamos los datos númericos.
+        distribuidor[Columnas[10]] = distribuidor[Columnas[10]].astype(int) # año
+        distribuidor[Columnas[0]] = distribuidor[Columnas[0]].astype(int)  # mes
         while True:
             n = len(distribuidor[Columnas[7]])
             aleatorios = self.lista_aleatorios(n)
@@ -50,12 +56,13 @@ class Distribuidor:
             distribuidor['folio'] = distribuidor.apply(lambda row: ''.join(map(str, [row[Columnas[10]], row[Columnas[0]], row[Columnas[6]], row['ID'], row['Index']])), axis=1)
             if not distribuidor['folio'].duplicated().any():
                 break
-        # Sustitución de valores null por "" o por 0 para valores str y num respectivamente.
+            
+        # Sustitucion de valores null por "" o por 0 para valores str y num.
         distribuidor[Columnas[6]] = distribuidor[Columnas[6]].fillna(0)
         distribuidor[Columnas[11]] = distribuidor[Columnas[11]].fillna(0)
         distribuidor[Columnas[12]] = distribuidor[Columnas[12]].fillna(0)
-        df_Mes = df_Mes.rename(columns={'Mes': 'MES'})
-        distribuidor = distribuidor.merge(df_Mes, on=Columnas[0], how='left')
+        self.df_Mes = self.df_Mes.rename(columns={'Mes': 'MES'})
+        distribuidor = distribuidor.merge(self.df_Mes, on=Columnas[0], how='left')
         distribuidor['fechaFactura'] = distribuidor[Columnas[10]].astype(str) + '-' + distribuidor['Num'].astype(str) + '-01'
         distribuidor['fechaFactura'] = distribuidor['fechaFactura'].astype(str)
         distribuidor['pais'] = 'Ecuador'
@@ -74,8 +81,6 @@ class Distribuidor:
         return df
         
     def Agripa_clean(self, distribuidor, Columnas):
-        Mes = {'Mes': list(range(1, 13)), 'Num': [str(i).zfill(2) for i in range(1, 13)]}
-        df_Mes = pd.DataFrame(Mes)
         ## Verificacion para que solo se den folios distintos con un bucle infinito que para hasta que folio tenga solo valores distintos
         distribuidor['folio'] = ""
         while True:
@@ -103,7 +108,7 @@ class Distribuidor:
         #Verificacion por consola.
         print("Presencia de repetidos:", distribuidor['folio'].duplicated().any())
         ### Trasnformacion de datos de tipo fecha y el mes:
-        distribuidor = distribuidor.merge(df_Mes, on=Columnas[1], how='left')
+        distribuidor = distribuidor.merge(self.df_Mes, on=Columnas[1], how='left')
         ### Trasnformacion de datos de tipo fecha:
         distribuidor['fechaFactura'] = distribuidor[Columnas[0]].astype(str) + '-' + distribuidor['Num'].astype(str)+'-01'
         distribuidor['fechaFactura'] = distribuidor['fechaFactura'].astype(str)
@@ -180,7 +185,8 @@ class App(tk.Tk):
                                                 'KILOS LITROS TOTAL']) # Columnas[12]
         # Instanciamos el objeto Agripac de tipo distribuidor:
         self.Agripac = Distribuidor(v_Num_Distri='61610107', v_ruta=v1, 
-                                        Columnas=['Año', # Columnas[0]
+                                        Columnas=[
+                                                'Año', # Columnas[0]
                                                 'Mes', # Columnas[1]
                                                 'Cod Rep Venta', # Columnas[2]
                                                 'Rep Venta', # Columnas[3]
@@ -252,7 +258,7 @@ class App(tk.Tk):
     def error_Archivo(self):
         messagebox.showerror("Error", "Archivo no permitido, por favor vuelve a ejecutar el programa ingresando un archivo de tipo .xlsx")
         self.after(30000, self.cerrar_ventana)
-        sys.exit()    
+        # sys.exit()   
     # Ventana que se muestra si el layout de excel no es el correcto.
     def error_columnas(self):
         messagebox.showerror("Error", "El nombre de los encabezados no coincide, reportar al administrador.")
@@ -270,7 +276,7 @@ class App(tk.Tk):
         sys.exit()
     # Funcion para mostrar que se creo el json correctamente:
     def msj_json(self,ruta_json):
-        messagebox.showinfo("Info.", "Archivo Json %s creado con exito."% (ruta_json))  
+        messagebox.showinfo("Info.", "Archivo Json %s creado con exito."% (ruta_json)) 
     # Ventana que se muestra cuando el archivo Json se cargo correctamente en el Web Service.
     def msj_webservice(self, msj_web):
         messagebox.showinfo("Info", msj_web)
@@ -312,12 +318,12 @@ class App(tk.Tk):
         if os.path.exists(nueva_ruta):
             # Mensaje si existe el archivo
             self.msj_json(nueva_ruta)
-            self.to_web_service(concatenado_data_json) # Comentar para pruebas.
+            # self.to_web_service(concatenado_data_json) # Comentar para pruebas.
         else:
             # Mensaje si no esite el archivo
             self.error_json()
         return concatenado_data_json
-    ## Modulo principal, aquí empezamos 
+    ## Modulo principal, que manda a llamar los objetos instanciados de la clase Distribuidor y hace validaciones para errores.
     def principal(self):
         # Deshabilitamos el boton aceptar para que no se pueda usar más de una vez.
         self.B2.config(state=DISABLED)
@@ -341,35 +347,47 @@ class App(tk.Tk):
                     print("Inicialización de transformación...")
                     Name_Distri = 'ECUATORIANA DE PROD. QUIM. S.A'
                     Name_short = 'Ecuaquimica'
-                    df = self.Ecuaquimica.Ecuaqui_Clean(distribuidor, self.Ecuaquimica.Columnas)
-                    
-                    indice = ruta.rfind("\\")
-                    nueva_ruta = ruta[:indice + 1]
-                    
-                    self.json_conver(ruta=nueva_ruta, df=df, name_distri=Name_Distri, num_distri=Num_Distri,short=Name_short)
-                    
-                    print("Procedimiento finalizado con exito...")
-                    sys.exit()
+                    print("Validación para mes ", distribuidor[self.Ecuaquimica.Columnas[0]].isnull().any())
+                    print("Validación para año ", distribuidor[self.Ecuaquimica.Columnas[10]].isnull().any())
+                    if distribuidor[self.Ecuaquimica.Columnas[0]].isnull().any():
+                        self.mostrar_error()
+                    else:
+                        df = self.Ecuaquimica.Ecuaqui_Clean(distribuidor, self.Ecuaquimica.Columnas)
+                        
+                        indice = ruta.rfind("\\")
+                        nueva_ruta = ruta[:indice + 1]
+                        
+                        self.json_conver(ruta=nueva_ruta, df=df, name_distri=Name_Distri, num_distri=Num_Distri,short=Name_short)
+                        
+                        print("Procedimiento finalizado con exito...")
+                        sys.exit()
                 # Modulo para Agripac
                 elif self.Agripac.Num_Distri == Num_Distri:
                     print("Inicialización de transformación...")
                     Name_Distri = 'AGRIPAC, S.A.'
                     Name_short = 'Agripac'
-                    df = self.Ecuaquimica.Agripa_clean(distribuidor, self.Agripac.Columnas)
-                    
-                    indice = ruta.rfind("\\")
-                    nueva_ruta = ruta[:indice + 1]
-                    
-                    self.json_conver(ruta=nueva_ruta, df=df, name_distri=Name_Distri, num_distri=Num_Distri, short=Name_short)
-                    print("Procedimiento finalizado con exito...")
-                    sys.exit()
+                    # print(distribuidor[self.Agripac.Columnas[0]].isnull().any())
+                    if distribuidor[self.Agripac.Columnas[0]].isnull().any() and  distribuidor[self.Agripac.Columnas[1]].isnull().any():
+                        self.mostrar_error()
+                    else:
+                        df = self.Agripac.Agripa_clean(distribuidor, self.Agripac.Columnas)
+                        
+                        indice = ruta.rfind("\\")
+                        nueva_ruta = ruta[:indice + 1]
+                        
+                        self.json_conver(ruta=nueva_ruta, df=df, name_distri=Name_Distri, num_distri=Num_Distri, short=Name_short)
+                        print("Procedimiento finalizado con exito...")
+                        sys.exit()
                 else:
                     self.Cliente_Not_foud()
-            except FileNotFoundError:
+            except FileNotFoundError as e1:
+                traceback.print_exc()
                 self.error_Archivo()
-            except IndexError:
+            except IndexError as e2:
+                traceback.print_exc()
                 self.error_columnas()
-            except KeyError:
+            except KeyError as e3:
+                traceback.print_exc()
                 self.error_columnas()
 
 
