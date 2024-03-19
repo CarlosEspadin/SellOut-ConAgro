@@ -367,7 +367,7 @@ class App(tk.Tk):
                     Name_Distri = 'AGRIPAC, S.A.'
                     Name_short = 'Agripac'
                     # print(distribuidor[self.Agripac.Columnas[0]].isnull().any())
-                    if distribuidor[self.Agripac.Columnas[0]].isnull().any() and  distribuidor[self.Agripac.Columnas[1]].isnull().any():
+                    if distribuidor[self.Agripac.Columnas[0]].isnull().any() or  distribuidor[self.Agripac.Columnas[1]].isnull().any():
                         self.mostrar_error()
                     else:
                         df = self.Agripac.Agripa_clean(distribuidor, self.Agripac.Columnas)
