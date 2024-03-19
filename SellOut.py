@@ -347,9 +347,7 @@ class App(tk.Tk):
                     print("Inicialización de transformación...")
                     Name_Distri = 'ECUATORIANA DE PROD. QUIM. S.A'
                     Name_short = 'Ecuaquimica'
-                    print("Validación para mes ", distribuidor[self.Ecuaquimica.Columnas[0]].isnull().any())
-                    print("Validación para año ", distribuidor[self.Ecuaquimica.Columnas[10]].isnull().any())
-                    if distribuidor[self.Ecuaquimica.Columnas[0]].isnull().any():
+                    if distribuidor[self.Ecuaquimica.Columnas[0]].isnull().any() or distribuidor[self.Ecuaquimica.Columnas[10]].isnull().any():
                         self.mostrar_error()
                     else:
                         df = self.Ecuaquimica.Ecuaqui_Clean(distribuidor, self.Ecuaquimica.Columnas)
@@ -367,7 +365,7 @@ class App(tk.Tk):
                     Name_Distri = 'AGRIPAC, S.A.'
                     Name_short = 'Agripac'
                     # print(distribuidor[self.Agripac.Columnas[0]].isnull().any())
-                    if distribuidor[self.Agripac.Columnas[0]].isnull().any() or  distribuidor[self.Agripac.Columnas[1]].isnull().any():
+                    if distribuidor[self.Agripac.Columnas[0]].isnull().any() or distribuidor[self.Agripac.Columnas[1]].isnull().any():
                         self.mostrar_error()
                     else:
                         df = self.Agripac.Agripa_clean(distribuidor, self.Agripac.Columnas)
