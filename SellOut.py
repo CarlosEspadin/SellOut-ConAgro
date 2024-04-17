@@ -1,6 +1,7 @@
 #!/C:/Users/carlo/AppData/Local/Programs/Python/Python311/python.exe
 # coding: latin-1
-######## Programa para subir información de distribuidores manualmente a ConAgro ########
+######## Programa para subir información de distribuidores manualmente a ConAgro SellOut y Stock ########
+## Requerimientos
 import os
 import pandas as pd
 import numpy as np
@@ -76,6 +77,7 @@ class Distribuidor:
         print(distribuidor.columns)
         columnas_deseadas = ['folio', 'fecha_Facturacion', 'volumen_Facturado', 'unidad_Medida', 'valorT_Facturado', 'nombre_Cliente', 'nombre_Vendedor_Distribuidor', 'codeProduct_Distribuidor', 'localidad', 'sucursal', 'linea_Producto', 'marca', 'pais', 'rfc']
         df = distribuidor[columnas_deseadas]
+        
         # Verificación del dataframe final.
         print(df)
         return df
@@ -142,33 +144,131 @@ class Distribuidor:
         # Verificación del dataframe final.
         print(df)
         return df
-        # Aquí puedes agregar más atributos y métodos según tus necesidades
+
+    # Metodo de tratamiento para Tepeyac
+    def Tepeyac_clean():
+        pass
+
+## Ventana introducción
+
+class VentanaIntroduccion(tk.Toplevel):
+    def habilitar(self):
+        self.boton_continuar.config(state=tk.ACTIVE)
+    
+    def __init__(self, parent, app):
+        super().__init__(parent)
+        self.title("Introducción a la Aplicación")
+        self.app = app  # Referencia a la aplicación principal
+        self.configure(bg="white", relief="sunken", highlightcolor="green")
+        # configure icon
+        self.icon_big = tk.PhotoImage(file="C:\\Users\\carlo\\OneDrive\\Documentos\\SellOut ConAgro\\Icons\\ConAgro_icon_big.png")
+        self.icon_small = tk.PhotoImage(file="C:\\Users\\carlo\\OneDrive\\Documentos\\SellOut ConAgro\\Icons\\ConAgro_icon_small.png")
+        self.iconphoto(False, self.icon_big, self.icon_small)
+        
+        # Agregar texto explicativo
+        label = ttk.Label(self, text="Bienvenido a la Aplicación para tratamiento y carga de información al webservice ConAgro ")
+        label.pack(padx=10, pady=5)
+        
+        # Selección de tipo de carga.
+        Label_radio = ttk.Label(self, text="Seleciona el tipo de carga:")
+        Label_radio.pack(padx=10, pady=2)
+        
+        # Botones de radio
+        self.selected = tk.StringVar()
+        
+        self.r1 = ttk.Radiobutton(self, text='SellOut', value='SellOut', variable=self.selected, command=self.habilitar)
+        self.r1.pack(padx=10, pady=5)
+        
+        self.r2 = ttk.Radiobutton(self, text='Stock', value='Stock', variable=self.selected, command=self.habilitar)
+        self.r2.pack(padx=10, pady=5)
+
+        # Botón para continuar
+        self.boton_continuar = ttk.Button(self, text="Continuar", command=self.continuar)
+        self.boton_continuar.pack(pady=5)
+        self.boton_continuar.config(state=tk.DISABLED)
+        
+        
+    def continuar(self):
+        self.destroy()  # Cerrar esta ventana de introducción
+        self.app.iniciar_app()  # Llamar al método iniciar_app de la aplicación principal
+
 
 # Unimos ambas clases por composión, Esto es útil cuando quieres utilizar los métodos y atributos de Distribuidor dentro de App, pero App no es un tipo de Distribuidor.
 
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        # Aquí creas la instancia de la clase Distribuidor   
+        self.title("Sell Out to Web Service")
         self.geometry("700x200")
         self.resizable(0, 0)
-        self.title("Sell Out to Web Service")
+        
+        # Crear las variables de instancia
+        self.ruta = tk.StringVar(self)
+        self.num_distri = tk.StringVar(self)
+        self.tipo_proceso = ""
+        
+        # Ocultar la ventana principal hasta que se muestre la ventana de introducción
+        self.withdraw()
+        
+        # Crear la ventana de introducción y pasar la referencia a la aplicación principal
+        self.introduccion = VentanaIntroduccion(self, self)
+        
+    def iniciar_app(self):
+        # Mostrar la ventana principal de la aplicación
+        self.deiconify()
+        
+        # Extraemos el valor para el tipo de proceso.
+        Tipo = self.introduccion.selected.get()
+        # Titulo de la venta principal:
+        self.title(Tipo +" to Web Service")
         
         # UI options
-        paddings = {'padx': 5, 'pady': 5}
+        paddings = {'padx': 6, 'pady': 6}
         entry_font = {'font': ('Helvetica', 11)}
         
         # configure the grid
         self.columnconfigure(0, weight=1)
         self.columnconfigure(1, weight=3)
         
-        # Creación de las variables globales para almacenar ruta y nombre de distribuidor.
-        global v1, v2
-        v1 = tk.StringVar()
-        v2 = tk.StringVar()
+        # Ruta del archivo.
+        ruta_label = ttk.Label(self, text="Ingresa la ruta del archivo:")
+        ruta_label.grid(column=0, row=1, sticky=tk.W, **paddings)
+        
+        self.ruta_entry = ttk.Entry(self, validate="key", validatecommand=(self.validar_ruta_archivo, "%P"), textvariable=self.ruta, **entry_font)
+        self.ruta_entry.grid(row=1, column=2)
+        self.ruta_entry.config(width=40)
+        
+        # Número de distribuidor.
+        distri_label = ttk.Label(self, text="Ingresa el Número de cliente:")
+        distri_label.grid(column=0, row=2, sticky=tk.W, **paddings)
+        
+        self.distri_entry = ttk.Entry(self, validate="key", validatecommand=(self.validar_numero_cliente, "%P"), textvariable=self.num_distri, **entry_font)
+        self.distri_entry.grid(row=2, column=2)
+        self.distri_entry.config(width=40)
+        
+        # Botones adicionales
+        self.B1 = ttk.Button(self, text="Insertar", command=self.obtener_ruta)
+        self.B1.grid(row=1, column=5)
+        
+        self.B3 = ttk.Button(self, text="Insertar", command=self.obtener_num)
+        self.B3.grid(row=2, column=5)
+        
+        self.B2 = ttk.Button(self, text="Aceptar", command=lambda: self.principal())
+        self.B2.place(relx=0.5, rely=0.7, anchor='center')
+        
+        # configure style
+        self.style = ttk.Style(self)
+        self.style.configure('TLabel', font=('Helvetica', 11))
+        self.style.configure('TButton', font=('Helvetica', 11)) 
+        
+        # configure icon
+        self.icon_big = tk.PhotoImage(file="C:\\Users\\carlo\\OneDrive\\Documentos\\SellOut ConAgro\\Icons\\ConAgro_icon_big.png")
+        self.icon_small = tk.PhotoImage(file="C:\\Users\\carlo\\OneDrive\\Documentos\\SellOut ConAgro\\Icons\\ConAgro_icon_small.png")
+        self.iconphoto(False, self.icon_big, self.icon_small)
+        
         
         # Instanciamos el objeto Ecuaquimica de tipo distribuidor.
-        self.Ecuaquimica = Distribuidor(v_Num_Distri='61610097', v_ruta=v1, 
+        self.Ecuaquimica = Distribuidor(v_Num_Distri='61610097', v_ruta=self.ruta, 
                                         Columnas=[
                                                 'MES', # Columnas[0]
                                                 'UNIDAD NEGOCIO', # Columnas[1]
@@ -184,7 +284,7 @@ class App(tk.Tk):
                                                 'VENTA NETA', # Columnas[11]
                                                 'KILOS LITROS TOTAL']) # Columnas[12]
         # Instanciamos el objeto Agripac de tipo distribuidor:
-        self.Agripac = Distribuidor(v_Num_Distri='61610107', v_ruta=v1, 
+        self.Agripac = Distribuidor(v_Num_Distri='61610107', v_ruta=self.ruta, 
                                         Columnas=[
                                                 'Año', # Columnas[0]
                                                 'Mes', # Columnas[1]
@@ -199,51 +299,45 @@ class App(tk.Tk):
                                                 'Marca', # Columnas[10]
                                                 'Neto KG/LT', # Columnas[11]
                                                 'Neto Venta']) # Columnas[12]
-        # Ruta del archivo.
-        ruta_label = ttk.Label(self, text="Ingresa la ruta del archivo:")
-        ruta_label.grid(column=0, row=0, sticky=tk.W, **paddings)
         
-        self.ruta_entry = ttk.Entry(self, validate="key", validatecommand=(self.validar_ruta_archivo, "%P"), textvariable=v1, **entry_font)
-        self.ruta_entry.grid(row=0, column=2)
-        self.ruta_entry.config(width=40)
-        
-        # Número de distribuidor.
-        distri_label = ttk.Label(self, text="Ingresa el Número de cliente:")
-        distri_label.grid(column=0, row=1, sticky=tk.W, **paddings)
-        
-        self.distri_entry = ttk.Entry(self, validate="key", validatecommand=(self.validar_ruta_archivo, "%P"), textvariable=v2, **entry_font)
-        self.distri_entry.grid(row=1, column=2)
-        self.distri_entry.config(width=40)
-        
-        # Botones adicionales
-        self.B1 = ttk.Button(self, text="Insertar", command=self.obtener_ruta)
-        self.B1.grid(row=0, column=5)
-        
-        self.B3 = ttk.Button(self, text="Insertar", command=self.obtener_num)
-        self.B3.grid(row=1, column=5)
-        
-        self.B2 = ttk.Button(self, text="Aceptar", command=lambda: self.principal())
-        self.B2.place(relx=0.5, rely=0.6, anchor='center')
-        
-        # configure style
-        self.style = ttk.Style(self)
-        self.style.configure('TLabel', font=('Helvetica', 11))
-        self.style.configure('TButton', font=('Helvetica', 11)) 
-        
-        # configure icon
-        self.icon_big = tk.PhotoImage(file="C:\\Users\\carlo\\OneDrive\\Documentos\\SellOut ConAgro\\Icons\\ConAgro_icon_big.png")
-        self.icon_small = tk.PhotoImage(file="C:\\Users\\carlo\\OneDrive\\Documentos\\SellOut ConAgro\\Icons\\ConAgro_icon_small.png")
-        self.iconphoto(False, self.icon_big, self.icon_small)
+        self.Tepeyac = Distribuidor(v_Num_Distri='10317368', v_ruta=self.ruta, 
+                                        Columnas=[
+                                                'fechaFactura', # Columnas[0]
+                                                'volumenFacturado', # Columnas[1]
+                                                'UnidadMedida', # Columnas[2]
+                                                'VTotalFacturado', # Columnas[3]
+                                                'NomCliente', # Columnas[4]
+                                                'NomVendedor', # Columnas[5]
+                                                'CodProducto', # Columnas[6]
+                                                'lugar', # Columnas[7]
+                                                'sucursal', # Columnas[8]
+                                                'LineaProducto', # Columnas[9]
+                                                'fechaFactura']) # Columnas[10]
+        # # Validación de ruta:
+        # self.ruta1 = self.v1.get()
+        # self.Num_Distri1 = self.v1.get()
+        # ## Verificacion:
+        # print("Ruta del archivo:", self.ruta1)
+        # print("Numero de clientes:", self.Num_Distri1)
+    
     # Método para cerrar la venta App.
     def cerrar_ventana(self):
         self.destroy()
     # Método que nos ayuda a validar la longitud de la ruta dada.
     def validar_ruta_archivo(self, nuevo_valor):
-        return len(nuevo_valor) <= 200
+        try:
+            return len(nuevo_valor) <= 200
+        except TypeError as e4:
+                self.mostrar_error()
+                
 
     # Método que valida la longitud del número de distribuidor proporcionado.
     def validar_numero_cliente(self, new_text):
-        return len(new_text) <=25
+        try:
+            return len(new_text) <=25
+        except TypeError as e4:
+            self.mostrar_error()
+
     # Ventana de error si el número de cliente ingresado no existe.
     def Cliente_Not_foud(self):
         messagebox.showerror("Error", "El cliente que estás ingresando no está registrado en ConAgro")
@@ -284,13 +378,9 @@ class App(tk.Tk):
         sys.exit()
     # Método que sirve para obtener la ruta de la entrada ruta_entry
     def obtener_ruta(self):
-        global v1
-        v1 = self.ruta_entry.get()
         self.B1.config(state=tk.DISABLED) 
     # Función para obtener número de distribuidor desde las entradas de texto
     def obtener_num(self):
-        global v2
-        v2 = self.distri_entry.get()  # Cambia 'distri_label' a 'distri_entry'
         self.B3.config(state=tk.DISABLED)
     # Función para consumir el webservice de ConAgro.
     def to_web_service(self, json_data):
@@ -318,16 +408,24 @@ class App(tk.Tk):
         if os.path.exists(nueva_ruta):
             # Mensaje si existe el archivo
             self.msj_json(nueva_ruta)
-            # self.to_web_service(concatenado_data_json) # Comentar para pruebas.
+            self.to_web_service(concatenado_data_json) # Comentar para pruebas.
         else:
             # Mensaje si no esite el archivo
             self.error_json()
         return concatenado_data_json
     ## Modulo principal, que manda a llamar los objetos instanciados de la clase Distribuidor y hace validaciones para errores.
+    
     def principal(self):
+        self.iniciar_app()
         # Deshabilitamos el boton aceptar para que no se pueda usar más de una vez.
         self.B2.config(state=DISABLED)
         ## Almacenamos las variables globales para su posterior uso.
+        # Extraemos el valor para el tipo de proceso.
+        v_Tipo = self.introduccion.selected.get()
+        print("El proceso sera de tipo: ", v_Tipo)
+
+        v1 = self.ruta.get()
+        v2 = self.num_distri.get()  # Cambia 'distri_label' a 'distri_entry'
         ruta = v1
         Num_Distri = v2
         ## Verificacion:
@@ -342,42 +440,45 @@ class App(tk.Tk):
                 # Empezamos leyendo el archivo de Excel que se proporciona el RPA.
                 distribuidor = pd.read_excel(ruta,sheet_name=0)
                 print(distribuidor.columns)
+                if v_Tipo == 'SellOut':
                 # Modulo Ecuaquimica.
-                if self.Ecuaquimica.Num_Distri == Num_Distri:
-                    print("Inicialización de transformación...")
-                    Name_Distri = 'ECUATORIANA DE PROD. QUIM. S.A'
-                    Name_short = 'Ecuaquimica'
-                    if distribuidor[self.Ecuaquimica.Columnas[0]].isnull().any() or distribuidor[self.Ecuaquimica.Columnas[10]].isnull().any():
-                        self.mostrar_error()
+                    if self.Ecuaquimica.Num_Distri == Num_Distri:
+                        print("Inicialización de transformación...")
+                        Name_Distri = 'ECUATORIANA DE PROD. QUIM. S.A'
+                        Name_short = 'Ecuaquimica'
+                        if distribuidor[self.Ecuaquimica.Columnas[0]].isnull().any() or distribuidor[self.Ecuaquimica.Columnas[10]].isnull().any():
+                            self.mostrar_error()
+                        else:
+                            df = self.Ecuaquimica.Ecuaqui_Clean(distribuidor, self.Ecuaquimica.Columnas)
+                            
+                            indice = ruta.rfind("\\")
+                            nueva_ruta = ruta[:indice + 1]
+                            
+                            self.json_conver(ruta=nueva_ruta, df=df, name_distri=Name_Distri, num_distri=Num_Distri,short=Name_short)
+                            
+                            print("Procedimiento finalizado con exito...")
+                            sys.exit()
+                    # Modulo para Agripac
+                    elif self.Agripac.Num_Distri == Num_Distri:
+                        print("Inicialización de transformación...")
+                        Name_Distri = 'AGRIPAC, S.A.'
+                        Name_short = 'Agripac'
+                        # print(distribuidor[self.Agripac.Columnas[0]].isnull().any())
+                        if distribuidor[self.Agripac.Columnas[0]].isnull().any() or distribuidor[self.Agripac.Columnas[1]].isnull().any():
+                            self.mostrar_error()
+                        else:
+                            df = self.Agripac.Agripa_clean(distribuidor, self.Agripac.Columnas)
+                            
+                            indice = ruta.rfind("\\")
+                            nueva_ruta = ruta[:indice + 1]
+                            
+                            self.json_conver(ruta=nueva_ruta, df=df, name_distri=Name_Distri, num_distri=Num_Distri, short=Name_short)
+                            print("Procedimiento finalizado con exito...")
+                            sys.exit()
                     else:
-                        df = self.Ecuaquimica.Ecuaqui_Clean(distribuidor, self.Ecuaquimica.Columnas)
-                        
-                        indice = ruta.rfind("\\")
-                        nueva_ruta = ruta[:indice + 1]
-                        
-                        self.json_conver(ruta=nueva_ruta, df=df, name_distri=Name_Distri, num_distri=Num_Distri,short=Name_short)
-                        
-                        print("Procedimiento finalizado con exito...")
-                        sys.exit()
-                # Modulo para Agripac
-                elif self.Agripac.Num_Distri == Num_Distri:
-                    print("Inicialización de transformación...")
-                    Name_Distri = 'AGRIPAC, S.A.'
-                    Name_short = 'Agripac'
-                    # print(distribuidor[self.Agripac.Columnas[0]].isnull().any())
-                    if distribuidor[self.Agripac.Columnas[0]].isnull().any() or distribuidor[self.Agripac.Columnas[1]].isnull().any():
-                        self.mostrar_error()
-                    else:
-                        df = self.Agripac.Agripa_clean(distribuidor, self.Agripac.Columnas)
-                        
-                        indice = ruta.rfind("\\")
-                        nueva_ruta = ruta[:indice + 1]
-                        
-                        self.json_conver(ruta=nueva_ruta, df=df, name_distri=Name_Distri, num_distri=Num_Distri, short=Name_short)
-                        print("Procedimiento finalizado con exito...")
-                        sys.exit()
-                else:
-                    self.Cliente_Not_foud()
+                        self.Cliente_Not_foud()
+                else: # Proceso para SellOut.
+                    pass
             except FileNotFoundError as e1:
                 traceback.print_exc()
                 self.error_Archivo()
@@ -387,9 +488,12 @@ class App(tk.Tk):
             except KeyError as e3:
                 traceback.print_exc()
                 self.error_columnas()
+            except TypeError as e4:
+                self.mostrar_error()
 
 
 # Inicialización de la clase App        
 if __name__ == "__main__":
+    
     app = App()
     app.mainloop()
