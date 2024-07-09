@@ -37,6 +37,15 @@ class Distribuidor:
     def lista_aleatorios(self, n):
         return [str(random.randint(0, 99)) + str(random.randint(0, 99)) for _ in range(n)]
     
+    # Metodo para subir información de los demás distribuidores de México
+    def Mexico(self, distribuidor, Columnas):
+        columnas_deseadas = Columnas
+        distribuidor['fecha_Facturacion'] = distribuidor['fecha_Facturacion'].sort_values().apply(lambda x: x.strftime("%Y-%m-%d"))
+        df = distribuidor[columnas_deseadas]
+        
+        print(df)
+        return df
+    
     # Método de limpieza para Ecuaquimica.
     def Ecuaqui_Clean(self, distribuidor, Columnas):        
         # sourcery skip: class-extract-method
@@ -47,17 +56,19 @@ class Distribuidor:
         while True:
             n = len(distribuidor[Columnas[7]])
             aleatorios = self.lista_aleatorios(n)
-            np.random.seed(22)
+            # np.random.seed(22)
             n = len(distribuidor[Columnas[0]])
             aleatorios1 = self.lista_aleatorios(n)
             Marcas1 = pd.DataFrame(distribuidor[Columnas[7]].unique().tolist(), columns=[Columnas[7]])
             Marcas1['ID'] = Marcas1.index
             distribuidor = distribuidor.merge(Marcas1, on=Columnas[7], how='left')
+            print(distribuidor)
             distribuidor['Index'] = aleatorios1
             distribuidor['folio'] = distribuidor.apply(lambda row: ''.join(map(str, [row[Columnas[10]], row[Columnas[0]], row[Columnas[6]], row['ID'], row['Index']])), axis=1)
             if not distribuidor['folio'].duplicated().any():
                 break
-            
+            else:
+                distribuidor.drop(columns=["ID"], inplace=True)
         # Sustitucion de valores null por "" o por 0 para valores str y num.
         distribuidor[Columnas[6]] = distribuidor[Columnas[6]].fillna(0)
         distribuidor[Columnas[11]] = distribuidor[Columnas[11]].fillna(0)
@@ -81,7 +92,7 @@ class Distribuidor:
         # Verificación del dataframe final.
         print(df)
         return df
-        
+
     def Agripa_clean(self, distribuidor, Columnas):
         ## Verificacion para que solo se den folios distintos con un bucle infinito que para hasta que folio tenga solo valores distintos
         distribuidor['folio'] = ""
@@ -300,6 +311,24 @@ class App(tk.Tk):
                                                 'Neto KG/LT', # Columnas[11]
                                                 'Neto Venta']) # Columnas[12]
         
+        self.DIEGO_FRANCO_LEAL = Distribuidor(v_Num_Distri='10268259', v_ruta=self.ruta, 
+                                        Columnas=[
+                                                'folio',
+                                                'fecha_Facturacion',
+                                                'volumen_Facturado',
+                                                'unidad_Medida',
+                                                'valorT_Facturado',
+                                                'rfc',
+                                                'nombre_Cliente',
+                                                'codeProduct_Distribuidor',
+                                                'localidad',
+                                                'sucursal',
+                                                'nombre_Vendedor_Distribuidor',
+                                                'linea_Producto',
+                                                'marca',
+                                                'pais',
+                                                'numero_Convenio'])
+        
         self.Tepeyac = Distribuidor(v_Num_Distri='10317368', v_ruta=self.ruta, 
                                         Columnas=[
                                                 'fechaFactura', # Columnas[0]
@@ -313,12 +342,23 @@ class App(tk.Tk):
                                                 'sucursal', # Columnas[8]
                                                 'LineaProducto', # Columnas[9]
                                                 'fechaFactura']) # Columnas[10]
-        # # Validación de ruta:
-        # self.ruta1 = self.v1.get()
-        # self.Num_Distri1 = self.v1.get()
-        # ## Verificacion:
-        # print("Ruta del archivo:", self.ruta1)
-        # print("Numero de clientes:", self.Num_Distri1)
+        
+        self.LofAgro = Distribuidor(v_Num_Distri='500619', v_ruta=self.ruta, 
+                                        Columnas=[
+                                                'folio',
+                                                'fechaFactura',
+                                                'volumen_Facturado',
+                                                'unidad_Medida',
+                                                'valorT_Facturado',
+                                                'rfc',
+                                                'nombre_Cliente',
+                                                'codeProduct_Distribuidor',
+                                                'localidad',
+                                                'sucursal',
+                                                'nombre_Vendedor_Distribuidor',
+                                                'linea_Producto',
+                                                'marca',
+                                                'pais'])
     
     # Método para cerrar la venta App.
     def cerrar_ventana(self):
@@ -339,7 +379,7 @@ class App(tk.Tk):
             self.mostrar_error()
 
     # Ventana de error si el número de cliente ingresado no existe.
-    def Cliente_Not_foud(self):
+    def Cliente_Not_foud(self):  # sourcery skip: class-extract-method
         messagebox.showerror("Error", "El cliente que estás ingresando no está registrado en ConAgro")
         self.after(30000, self.cerrar_ventana)
         sys.exit()
@@ -384,27 +424,37 @@ class App(tk.Tk):
         self.B3.config(state=tk.DISABLED)
     # Función para consumir el webservice de ConAgro.
     def to_web_service(self, json_data):
+        sess = requests.Session()
+        adapter = requests.adapters.HTTPAdapter(max_retries = 20)
+        sess.mount('https://', adapter)
         url = 'https://conagrosyngentapp.syngentadigitalapps.com/syngenta-service-0.0.1/api/v1/Sellout'
         headers = {'Content-type': 'application/json'}
-        response = requests.post(url, data=json_data, headers=headers)
-        if response.status_code == True:
-            self.error_WebService(response.text)
+        json_data
+        print("Este es el encavezado: ", headers)
+        # sess = sess.post(url, data=json_data, headers=headers, verify=False)
+        sess = sess.post(url, data=json_data, headers=headers)
+        if sess.status_code == True:
+            self.error_WebService(sess.text)
+            print("Este es el encavezado: ", sess.text)
         else:
-            self.msj_webservice(response.text)
-        return response.text
+            self.msj_webservice(sess.text)
+            print("Este es el encavezado: ", sess.text)
+        return sess.text
     # Función para convertir los datos de Sell Out en Json con el formato ConAgro. 
-    def json_conver(self,ruta, df, name_distri, num_distri, short):
+    def json_conver(self,ruta, df, name_distri, num_distri):
         # Convertir DataFrame a JSON
         global json_data
-        json_data = df.to_json(ruta + short+".json", orient="records")
-        with open(ruta + short+".json", 'r') as archivo_json:
+        print("Validación de ruta: ", ruta + ".json")
+        json_data = df.to_json(ruta + ".json", orient="records")
+        with open(ruta +".json", 'r') as archivo_json:
             data = json.load(archivo_json)
         json_str = json.dumps(data)
         json_headers = '{"clave_Distribuidor":"%s","nombre_distribuidor":"%s","productLines":' % (num_distri, name_distri)
+        
         concatenado_data_json = json_headers + json_str + '}'
-        with open(ruta + short.upper()+".json", 'w') as archivo_conagro:
+        with open(ruta +".json", 'w') as archivo_conagro:
             archivo_conagro.write(concatenado_data_json)
-        nueva_ruta = ruta + short.upper()+".json"
+        nueva_ruta = ruta +".json"
         if os.path.exists(nueva_ruta):
             # Mensaje si existe el archivo
             self.msj_json(nueva_ruta)
@@ -415,10 +465,10 @@ class App(tk.Tk):
         return concatenado_data_json
     ## Modulo principal, que manda a llamar los objetos instanciados de la clase Distribuidor y hace validaciones para errores.
     
-    def principal(self):
+    def principal(self):  # sourcery skip: extract-method
         self.iniciar_app()
         # Deshabilitamos el boton aceptar para que no se pueda usar más de una vez.
-        self.B2.config(state=DISABLED)
+        self.B2.config(state=tk.DISABLED)
         ## Almacenamos las variables globales para su posterior uso.
         # Extraemos el valor para el tipo de proceso.
         v_Tipo = self.introduccion.selected.get()
@@ -451,10 +501,11 @@ class App(tk.Tk):
                         else:
                             df = self.Ecuaquimica.Ecuaqui_Clean(distribuidor, self.Ecuaquimica.Columnas)
                             
-                            indice = ruta.rfind("\\")
-                            nueva_ruta = ruta[:indice + 1]
+                            indice = ruta.rfind(".xlsx")
+                            nueva_ruta = ruta[:indice - 1]
+                            print(nueva_ruta)
                             
-                            self.json_conver(ruta=nueva_ruta, df=df, name_distri=Name_Distri, num_distri=Num_Distri,short=Name_short)
+                            self.json_conver(ruta=nueva_ruta, df=df, name_distri=Name_Distri, num_distri=Num_Distri)
                             
                             print("Procedimiento finalizado con exito...")
                             sys.exit()
@@ -469,16 +520,66 @@ class App(tk.Tk):
                         else:
                             df = self.Agripac.Agripa_clean(distribuidor, self.Agripac.Columnas)
                             
-                            indice = ruta.rfind("\\")
-                            nueva_ruta = ruta[:indice + 1]
+                            indice = ruta.rfind(".xlsx")
+                            nueva_ruta = ruta[:indice]
+                            print(nueva_ruta)
                             
-                            self.json_conver(ruta=nueva_ruta, df=df, name_distri=Name_Distri, num_distri=Num_Distri, short=Name_short)
+                            self.json_conver(ruta=nueva_ruta, df=df, name_distri=Name_Distri, num_distri=Num_Distri)
+                            print("Procedimiento finalizado con exito...")
+                            sys.exit()
+                    elif self.LofAgro.Num_Distri == Num_Distri:
+                        print("Inicialización de transformación...")
+                        Name_Distri = 'LOFAGRO'
+                        Name_short = 'LofAgro'
+                        if distribuidor[self.LofAgro.Columnas[0]].isnull().any() or distribuidor[self.LofAgro.Columnas[1]].isnull().any():
+                            self.mostrar_error()
+                        else:
+                            df = self.LofAgro.Mexico(distribuidor, self.LofAgro.Columnas)
+                            
+                            indice = ruta.rfind(".xlsx")
+                            nueva_ruta = ruta[:indice - 1]
+                            print(nueva_ruta)
+                            
+                            self.json_conver(ruta=nueva_ruta, df=df, name_distri=Name_Distri, num_distri=Num_Distri)
+                            print("Procedimiento finalizado con exito...")
+                            sys.exit()
+                    elif self.DIEGO_FRANCO_LEAL.Num_Distri == Num_Distri:
+                        print("Inicialización de transformación...")
+                        Name_Distri = 'DIEGO FRANCO LEAL GARCIA'
+                        Name_short = 'DIEGO FRANCO LEAL GARCIA'
+                        if distribuidor[self.DIEGO_FRANCO_LEAL.Columnas[0]].isnull().any() or distribuidor[self.DIEGO_FRANCO_LEAL.Columnas[1]].isnull().any():
+                            self.mostrar_error()
+                        else:
+                            df = self.DIEGO_FRANCO_LEAL.Mexico(distribuidor, self.DIEGO_FRANCO_LEAL.Columnas)
+                            
+                            indice = ruta.rfind(".xlsx")
+                            nueva_ruta = ruta[:indice - 1]
+                            print(nueva_ruta)
+                            
+                            self.json_conver(ruta=nueva_ruta, df=df, name_distri=Name_Distri, num_distri=Num_Distri)
+                            print("Procedimiento finalizado con exito...")
+                            sys.exit()
+                    elif self.Tepeyac.Num_Distri == Num_Distri:
+                        print("Inicialización de transformación...")
+                        Name_Distri = 'Tepeyac'
+                        Name_short = 'Tepeyac'
+                        if distribuidor[self.Tepeyac.Columnas[0]].isnull().any() or distribuidor[self.Tepeyac.Columnas[1]].isnull().any():
+                            self.mostrar_error()
+                        else:
+                            df = self.Tepeyac.Mexico(distribuidor, self.Tepeyac.Columnas)
+                            
+                            indice = ruta.rfind(".xlsx")
+                            nueva_ruta = ruta[:indice - 1]
+                            print(nueva_ruta)
+                            
+                            self.json_conver(ruta=nueva_ruta, df=df, name_distri=Name_Distri, num_distri=Num_Distri)
                             print("Procedimiento finalizado con exito...")
                             sys.exit()
                     else:
                         self.Cliente_Not_foud()
                 else: # Proceso para SellOut.
-                    pass
+                    print("Test...")
+                    sys.exit()
             except FileNotFoundError as e1:
                 traceback.print_exc()
                 self.error_Archivo()
