@@ -15,6 +15,7 @@ from tkinter import ttk
 import traceback
 import sys
 import time
+from pathlib import Path
 
 # Definimos la clase Distribuidor, esta clase nos permite instanciar los nombres de las columnas de cada distribuidor y que se ajuste al LayOut correspondiente, siento la llave principal v_Num_Distri.
 # Retomar la construcción de la clase Distribuidor.
@@ -39,126 +40,115 @@ class Distribuidor:
     
     # Metodo para subir información de los demás distribuidores de México
     def Mexico(self, distribuidor, Columnas):
-        columnas_deseadas = Columnas
-        distribuidor['fecha_Facturacion'] = distribuidor['fecha_Facturacion'].sort_values().apply(lambda x: x.strftime("%Y-%m-%d"))
+        # Condición para Ecuaquimica
+        if 'MES' in distribuidor.columns and 'año' in distribuidor.columns:
+            # Generación de folio sintentico unicos.
+            distribuidor['folio'] = ""
+            # Casteamos y redondeamos los datos númericos.
+            distribuidor['MES'] = distribuidor['MES'].astype(int) # año
+            distribuidor['año'] = distribuidor['año'].astype(int)  # mes
+            # Sustitucion de valores null por "" o por 0 para valores str y num.
+            distribuidor["rfc"] = distribuidor["rfc"].fillna(0)
+            distribuidor["valorT_Facturado"] = distribuidor["valorT_Facturado"].fillna(0)
+            distribuidor["volumen_Facturado"] = distribuidor["volumen_Facturado"].fillna(0)
+            while True:
+                n = len(distribuidor["codeProduct_Distribuidor"])
+                aleatorios = self.lista_aleatorios(n)
+                # np.random.seed(22)
+                n = len(distribuidor["MES"])
+                aleatorios1 = self.lista_aleatorios(n)
+                Marcas1 = pd.DataFrame(distribuidor["codeProduct_Distribuidor"].unique().tolist(), columns=["codeProduct_Distribuidor"])
+                Marcas1['ID'] = Marcas1.index
+                distribuidor = distribuidor.merge(Marcas1, on="codeProduct_Distribuidor", how='left')
+                print(distribuidor)
+                distribuidor['Index'] = aleatorios1
+                distribuidor['folio'] = distribuidor.apply(lambda row: ''.join(map(str, [row["año"], row["MES"], row["rfc"], row['ID'], row['Index']])), axis=1)
+                if not distribuidor['folio'].duplicated().any():
+                    break
+                else:
+                    distribuidor.drop(columns=["ID"], inplace=True)
+            
+            self.df_Mes = self.df_Mes.rename(columns={'Mes': 'MES'})
+            distribuidor = distribuidor.merge(self.df_Mes, on='MES', how='left')
+            distribuidor['fechaFactura'] = distribuidor["año"].astype(str) + '-' + distribuidor['Num'].astype(str) + '-01'
+            distribuidor['fechaFactura'] = distribuidor['fechaFactura'].astype(str)
+            distribuidor['pais'] = 'Ecuador'
+            distribuidor['marca'] = 'Syngenta'
+            distribuidor = distribuidor.rename(columns={'fechaFactura': 'fecha_Facturacion'})
+            # distribuidor = distribuidor.rename(columns={'fechaFactura': 'fecha_Facturacion', Columnas[12]: 'volumen_Facturado', Columnas[11]: 'valorT_Facturado', Columnas[5]: 'nombre_Cliente', Columnas[3]: 'nombre_Vendedor_Distribuidor', Columnas[7]: 'codeProduct_Distribuidor', Columnas[6]: 'rfc', Columnas[1]: 'localidad'})
+            distribuidor['unidad_Medida'] = ""
+            distribuidor['sucursal'] = ""
+            distribuidor['linea_Producto'] = ""
+            distribuidor['numero_Convenio'] = ""
+            distribuidor['localidad']= ""
+            distribuidor['fecha_Facturacion'] = distribuidor['fecha_Facturacion'].astype(str)
+            distribuidor['rfc'] = distribuidor['rfc'].astype(str)
+            columnas_deseadas = Columnas
+        # Casp para Agripac
+        elif 'Mes' in distribuidor.columns and 'Año' in distribuidor.columns:
+            ## Verificacion para que solo se den folios distintos con un bucle infinito que para hasta que folio tenga solo valores distintos
+            distribuidor['folio'] = ""
+            # Sustitución de valores null por "" o por 0 para valores str y num respectivamente.
+            distribuidor["rfc"] = distribuidor["rfc"].fillna(0)
+            distribuidor["volumen_Facturado"] = distribuidor["volumen_Facturado"].fillna(0)
+            distribuidor["valorT_Facturado"] = distribuidor["valorT_Facturado"].fillna(0)
+            while True:
+                # print("Ingresa cuantos numeros aleatorios deseas obtener:")
+                n = len(distribuidor["Marca"])
+                aleatorios = self.lista_aleatorios(n)
+                # print(aleatorios)
+                np.random.seed(22)
+                n = len(distribuidor["Mes"])
+                aleatorios1 = self.lista_aleatorios(n)
+                Marcas = pd.DataFrame(distribuidor["codeProduct_Distribuidor"].unique().tolist(), columns=["codeProduct_Distribuidor"])
+                Marcas['ID'] = Marcas.index
+                # Marcas
+                distribuidor = distribuidor.merge(Marcas, on="codeProduct_Distribuidor", how='left')
+                ### Creación de folio unico para subir a ConAgro
+                distribuidor['Index'] = aleatorios
+                distribuidor['folio'] = distribuidor.apply(lambda row: ''.join(map(str, [row["Año"], row['Mes'], row["Cod Solicitante"], row['ID'], row['Index']])), axis=1)
+                distribuidor[distribuidor['folio'].duplicated()]
+                if distribuidor['folio'].duplicated().any()==False:
+                    break
+            #Verificacion por consola.
+            print("Presencia de repetidos:", distribuidor['folio'].duplicated().any())
+            ### Trasnformacion de datos de tipo fecha y el mes:
+            distribuidor = distribuidor.merge(self.df_Mes, on='Mes', how='left')
+            ### Trasnformacion de datos de tipo fecha:
+            distribuidor['fechaFactura'] = distribuidor["Año"].astype(str) + '-' + distribuidor['Num'].astype(str)+'-01'
+            distribuidor['fechaFactura'] = distribuidor['fechaFactura'].astype(str)
+            ## Datos distribuidor
+            distribuidor['pais']='Ecuador'
+            distribuidor['marca'] = 'Syngenta'
+            distribuidor = distribuidor.rename(columns={'fechaFactura': 'fecha_Facturacion'})
+            #CAMBIO A LAYOUT DE CARGA PARA WS
+            # distribuidor = distribuidor.rename(columns={'fechaFactura': 'fecha_Facturacion',
+            #                                         Columnas[11]: 'volumen_Facturado',
+            #                                         Columnas[12]: 'valorT_Facturado',
+            #                                         Columnas[6]: 'nombre_Cliente',
+            #                                         Columnas[3]: 'nombre_Vendedor_Distribuidor',
+            #                                         Columnas[9]: 'codeProduct_Distribuidor',
+            #                                         Columnas[7]: 'rfc'})
+            distribuidor['unidad_Medida'] = ""
+            distribuidor['sucursal'] = ""
+            distribuidor['linea_Producto'] = ""
+            distribuidor['numero_Convenio'] = ""
+            distribuidor['localidad']= ""
+            distribuidor['fecha_Facturacion'] = distribuidor['fecha_Facturacion'].astype(str)
+            distribuidor['rfc'] = distribuidor['rfc'].astype(str)
+            # Comprobación del dataframe que se esta exportando.
+            columnas_deseadas = Columnas
+            
+        # Caso para todos los demás distribuidores provenientes de méxico
+        else:
+            columnas_deseadas = Columnas
+            distribuidor['fecha_Facturacion'] = distribuidor['fecha_Facturacion'].sort_values().apply(lambda x: x.strftime("%Y-%m-%d"))
+        
         df = distribuidor[columnas_deseadas]
         
-        print(df)
-        return df
-    
-    # Método de limpieza para Ecuaquimica.
-    def Ecuaqui_Clean(self, distribuidor, Columnas):        
-        # sourcery skip: class-extract-method
-        distribuidor['folio'] = ""
-        # Casteamos y redondeamos los datos númericos.
-        distribuidor[Columnas[10]] = distribuidor[Columnas[10]].astype(int) # año
-        distribuidor[Columnas[0]] = distribuidor[Columnas[0]].astype(int)  # mes
-        while True:
-            n = len(distribuidor[Columnas[7]])
-            aleatorios = self.lista_aleatorios(n)
-            # np.random.seed(22)
-            n = len(distribuidor[Columnas[0]])
-            aleatorios1 = self.lista_aleatorios(n)
-            Marcas1 = pd.DataFrame(distribuidor[Columnas[7]].unique().tolist(), columns=[Columnas[7]])
-            Marcas1['ID'] = Marcas1.index
-            distribuidor = distribuidor.merge(Marcas1, on=Columnas[7], how='left')
-            print(distribuidor)
-            distribuidor['Index'] = aleatorios1
-            distribuidor['folio'] = distribuidor.apply(lambda row: ''.join(map(str, [row[Columnas[10]], row[Columnas[0]], row[Columnas[6]], row['ID'], row['Index']])), axis=1)
-            if not distribuidor['folio'].duplicated().any():
-                break
-            else:
-                distribuidor.drop(columns=["ID"], inplace=True)
-        # Sustitucion de valores null por "" o por 0 para valores str y num.
-        distribuidor[Columnas[6]] = distribuidor[Columnas[6]].fillna(0)
-        distribuidor[Columnas[11]] = distribuidor[Columnas[11]].fillna(0)
-        distribuidor[Columnas[12]] = distribuidor[Columnas[12]].fillna(0)
-        self.df_Mes = self.df_Mes.rename(columns={'Mes': 'MES'})
-        distribuidor = distribuidor.merge(self.df_Mes, on=Columnas[0], how='left')
-        distribuidor['fechaFactura'] = distribuidor[Columnas[10]].astype(str) + '-' + distribuidor['Num'].astype(str) + '-01'
-        distribuidor['fechaFactura'] = distribuidor['fechaFactura'].astype(str)
-        distribuidor['pais'] = 'Ecuador'
-        distribuidor['marca'] = 'Syngenta'
-        distribuidor = distribuidor.rename(columns={'fechaFactura': 'fecha_Facturacion', Columnas[12]: 'volumen_Facturado', Columnas[11]: 'valorT_Facturado', Columnas[5]: 'nombre_Cliente', Columnas[3]: 'nombre_Vendedor_Distribuidor', Columnas[7]: 'codeProduct_Distribuidor', Columnas[6]: 'rfc', Columnas[1]: 'localidad'})
-        distribuidor['unidad_Medida'] = ""
-        distribuidor['sucursal'] = ""
-        distribuidor['linea_Producto'] = ""
-        distribuidor['fecha_Facturacion'] = distribuidor['fecha_Facturacion'].astype(str)
-        distribuidor['rfc'] = distribuidor['rfc'].astype(str)
         print(distribuidor.columns)
-        columnas_deseadas = ['folio', 'fecha_Facturacion', 'volumen_Facturado', 'unidad_Medida', 'valorT_Facturado', 'nombre_Cliente', 'nombre_Vendedor_Distribuidor', 'codeProduct_Distribuidor', 'localidad', 'sucursal', 'linea_Producto', 'marca', 'pais', 'rfc']
-        df = distribuidor[columnas_deseadas]
-        
-        # Verificación del dataframe final.
         print(df)
         return df
-
-    def Agripa_clean(self, distribuidor, Columnas):
-        ## Verificacion para que solo se den folios distintos con un bucle infinito que para hasta que folio tenga solo valores distintos
-        distribuidor['folio'] = ""
-        while True:
-            # print("Ingresa cuantos numeros aleatorios deseas obtener:")
-            n = len(distribuidor[Columnas[10]])
-            aleatorios = self.lista_aleatorios(n)
-            # print(aleatorios)
-            np.random.seed(22)
-            n = len(distribuidor[Columnas[1]])
-            aleatorios1 = self.lista_aleatorios(n)
-            Marcas = pd.DataFrame(distribuidor[Columnas[9]].unique().tolist(), columns=[Columnas[9]])
-            Marcas['ID'] = Marcas.index
-            # Marcas
-            distribuidor = distribuidor.merge(Marcas, on=Columnas[9], how='left')
-            ### Creación de folio unico para subir a ConAgro
-            distribuidor['Index'] = aleatorios
-            distribuidor['folio'] = distribuidor.apply(lambda row: ''.join(map(str, [row[Columnas[0]], row[Columnas[1]], row[Columnas[5]], row['ID'], row['Index']])), axis=1)
-            distribuidor[distribuidor['folio'].duplicated()]
-            if distribuidor['folio'].duplicated().any()==False:
-                break
-        # Sustitución de valores null por "" o por 0 para valores str y num respectivamente.
-        distribuidor[Columnas[7]] = distribuidor[Columnas[7]].fillna(0)
-        distribuidor[Columnas[11]] = distribuidor[Columnas[11]].fillna(0)
-        distribuidor[Columnas[12]] = distribuidor[Columnas[12]].fillna(0)
-        #Verificacion por consola.
-        print("Presencia de repetidos:", distribuidor['folio'].duplicated().any())
-        ### Trasnformacion de datos de tipo fecha y el mes:
-        distribuidor = distribuidor.merge(self.df_Mes, on=Columnas[1], how='left')
-        ### Trasnformacion de datos de tipo fecha:
-        distribuidor['fechaFactura'] = distribuidor[Columnas[0]].astype(str) + '-' + distribuidor['Num'].astype(str)+'-01'
-        distribuidor['fechaFactura'] = distribuidor['fechaFactura'].astype(str)
-        ## Datos distribuidor
-        distribuidor['pais']='Ecuador'
-        distribuidor['marca'] = 'Syngenta'
-        #CAMBIO A LAYOUT DE CARGA PARA WS
-        distribuidor = distribuidor.rename(columns={'fechaFactura': 'fecha_Facturacion',
-                                                Columnas[11]: 'volumen_Facturado',
-                                                Columnas[12]: 'valorT_Facturado',
-                                                Columnas[6]: 'nombre_Cliente',
-                                                Columnas[3]: 'nombre_Vendedor_Distribuidor',
-                                                Columnas[9]: 'codeProduct_Distribuidor',
-                                                Columnas[7]: 'rfc'})
-        distribuidor['rfc']=distribuidor['rfc'].astype(str)
-        distribuidor['unidad_Medida'] = ""
-        distribuidor['sucursal'] = ""
-        distribuidor['localidad']= ""
-        distribuidor['sucursal'] = distribuidor['sucursal'].fillna("", inplace=False)
-        distribuidor['unidad_Medida'] = distribuidor['unidad_Medida'].fillna("", inplace=False)
-        # distribuidor = distribuidor.rename(columns={'Sucursal': 'sucursal'})
-        distribuidor['linea_Producto'] = ""
-        distribuidor['linea_Producto'] = distribuidor['linea_Producto'].fillna("", inplace=False)
-        distribuidor['fecha_Facturacion'] = distribuidor['fecha_Facturacion'].astype(str)
-        distribuidor['rfc']= distribuidor['rfc'].astype(str)
-        # Comprobación del dataframe que se esta exportando.
-        print(distribuidor.columns)
-
-        columnas_deseadas = ['folio', 'fecha_Facturacion', 'volumen_Facturado', 'unidad_Medida', 'valorT_Facturado', 'nombre_Cliente', 'nombre_Vendedor_Distribuidor', 'codeProduct_Distribuidor', 'localidad', 'sucursal', 'linea_Producto', 'marca', 'pais', 'rfc']
-        df = distribuidor[columnas_deseadas]
-        # Verificación del dataframe final.
-        print(df)
-        return df
-
-    # Metodo de tratamiento para Tepeyac
-    def Tepeyac_clean():
-        pass
 
 ## Ventana introducción
 
@@ -167,13 +157,15 @@ class VentanaIntroduccion(tk.Toplevel):
         self.boton_continuar.config(state=tk.ACTIVE)
     
     def __init__(self, parent, app):
+        self.ruta_abs = Path(__file__)
+        self.ruta_abs = self.ruta_abs.parent
         super().__init__(parent)
         self.title("Introducción a la Aplicación")
         self.app = app  # Referencia a la aplicación principal
         self.configure(bg="white", relief="sunken", highlightcolor="green")
         # configure icon
-        self.icon_big = tk.PhotoImage(file="C:\\Users\\carlo\\OneDrive\\Documentos\\SellOut ConAgro\\Icons\\ConAgro_icon_big.png")
-        self.icon_small = tk.PhotoImage(file="C:\\Users\\carlo\\OneDrive\\Documentos\\SellOut ConAgro\\Icons\\ConAgro_icon_small.png")
+        self.icon_big = tk.PhotoImage(file=Path(self.ruta_abs,"Icons","ConAgro_icon_big.png"))
+        self.icon_small = tk.PhotoImage(file=Path(self.ruta_abs,"Icons","ConAgro_icon_small.png"))
         self.iconphoto(False, self.icon_big, self.icon_small)
         
         # Agregar texto explicativo
@@ -272,93 +264,14 @@ class App(tk.Tk):
         self.style.configure('TLabel', font=('Helvetica', 11))
         self.style.configure('TButton', font=('Helvetica', 11)) 
         
+        # Establecemos la ruta absoluta:
+        self.ruta_abs = Path(__file__)
+        self.ruta_abs = self.ruta_abs.parent
+        
         # configure icon
-        self.icon_big = tk.PhotoImage(file="C:\\Users\\carlo\\OneDrive\\Documentos\\SellOut ConAgro\\Icons\\ConAgro_icon_big.png")
-        self.icon_small = tk.PhotoImage(file="C:\\Users\\carlo\\OneDrive\\Documentos\\SellOut ConAgro\\Icons\\ConAgro_icon_small.png")
+        self.icon_big = tk.PhotoImage(file=Path(self.ruta_abs,"Icons","ConAgro_icon_big.png"))
+        self.icon_small = tk.PhotoImage(file=Path(self.ruta_abs,"Icons","ConAgro_icon_small.png"))
         self.iconphoto(False, self.icon_big, self.icon_small)
-        
-        
-        # Instanciamos el objeto Ecuaquimica de tipo distribuidor.
-        self.Ecuaquimica = Distribuidor(v_Num_Distri='61610097', v_ruta=self.ruta, 
-                                        Columnas=[
-                                                'MES', # Columnas[0]
-                                                'UNIDAD NEGOCIO', # Columnas[1]
-                                                'ZONA COMERCIAL', # Columnas[2]
-                                                'VENDEDOR', # Columnas[3]
-                                                'ESTABLECIMIENTO', # Columnas[4]
-                                                'NEGOCIO ESTABLECIMIENTO', # Columnas[5]
-                                                'IDENTIFICACION', # Columnas[6]
-                                                'DESCRIPCION PRODUCTO', # Columnas[7]
-                                                'NOMBRE PROVEEDOR', # Columnas[8]
-                                                'TIPO CLIENTE', # Columnas[9]
-                                                'año', # Columnas[10]
-                                                'VENTA NETA', # Columnas[11]
-                                                'KILOS LITROS TOTAL']) # Columnas[12]
-        # Instanciamos el objeto Agripac de tipo distribuidor:
-        self.Agripac = Distribuidor(v_Num_Distri='61610107', v_ruta=self.ruta, 
-                                        Columnas=[
-                                                'Año', # Columnas[0]
-                                                'Mes', # Columnas[1]
-                                                'Cod Rep Venta', # Columnas[2]
-                                                'Rep Venta', # Columnas[3]
-                                                'Division', # Columnas[4]
-                                                'Cod Solicitante', # Columnas[5]
-                                                'Solicitante', # Columnas[6]
-                                                'RUC', # Columnas[7]
-                                                'Tipo', # Columnas[8]
-                                                'Cod Marca', # Columnas[9]
-                                                'Marca', # Columnas[10]
-                                                'Neto KG/LT', # Columnas[11]
-                                                'Neto Venta']) # Columnas[12]
-        
-        self.DIEGO_FRANCO_LEAL = Distribuidor(v_Num_Distri='10268259', v_ruta=self.ruta, 
-                                        Columnas=[
-                                                'folio',
-                                                'fecha_Facturacion',
-                                                'volumen_Facturado',
-                                                'unidad_Medida',
-                                                'valorT_Facturado',
-                                                'rfc',
-                                                'nombre_Cliente',
-                                                'codeProduct_Distribuidor',
-                                                'localidad',
-                                                'sucursal',
-                                                'nombre_Vendedor_Distribuidor',
-                                                'linea_Producto',
-                                                'marca',
-                                                'pais',
-                                                'numero_Convenio'])
-        
-        self.Tepeyac = Distribuidor(v_Num_Distri='10317368', v_ruta=self.ruta, 
-                                        Columnas=[
-                                                'fechaFactura', # Columnas[0]
-                                                'volumenFacturado', # Columnas[1]
-                                                'UnidadMedida', # Columnas[2]
-                                                'VTotalFacturado', # Columnas[3]
-                                                'NomCliente', # Columnas[4]
-                                                'NomVendedor', # Columnas[5]
-                                                'CodProducto', # Columnas[6]
-                                                'lugar', # Columnas[7]
-                                                'sucursal', # Columnas[8]
-                                                'LineaProducto', # Columnas[9]
-                                                'fechaFactura']) # Columnas[10]
-        
-        self.LofAgro = Distribuidor(v_Num_Distri='500619', v_ruta=self.ruta, 
-                                        Columnas=[
-                                                'folio',
-                                                'fechaFactura',
-                                                'volumen_Facturado',
-                                                'unidad_Medida',
-                                                'valorT_Facturado',
-                                                'rfc',
-                                                'nombre_Cliente',
-                                                'codeProduct_Distribuidor',
-                                                'localidad',
-                                                'sucursal',
-                                                'nombre_Vendedor_Distribuidor',
-                                                'linea_Producto',
-                                                'marca',
-                                                'pais'])
     
     # Método para cerrar la venta App.
     def cerrar_ventana(self):
@@ -458,13 +371,14 @@ class App(tk.Tk):
         if os.path.exists(nueva_ruta):
             # Mensaje si existe el archivo
             self.msj_json(nueva_ruta)
-            self.to_web_service(concatenado_data_json) # Comentar para pruebas.
+            # self.to_web_service(concatenado_data_json) # Comentar para pruebas.
         else:
             # Mensaje si no esite el archivo
             self.error_json()
         return concatenado_data_json
     ## Modulo principal, que manda a llamar los objetos instanciados de la clase Distribuidor y hace validaciones para errores.
     
+                
     def principal(self):  # sourcery skip: extract-method
         self.iniciar_app()
         # Deshabilitamos el boton aceptar para que no se pueda usar más de una vez.
@@ -477,6 +391,7 @@ class App(tk.Tk):
         v1 = self.ruta.get()
         v2 = self.num_distri.get()  # Cambia 'distri_label' a 'distri_entry'
         ruta = v1
+        # ruta = Path(ruta)
         Num_Distri = v2
         ## Verificacion:
         print("Ruta del archivo:", ruta)
@@ -491,88 +406,59 @@ class App(tk.Tk):
                 distribuidor = pd.read_excel(ruta,sheet_name=0)
                 print(distribuidor.columns)
                 if v_Tipo == 'SellOut':
-                # Modulo Ecuaquimica.
-                    if self.Ecuaquimica.Num_Distri == Num_Distri:
+                # Modulo General.
+                    print("Validación 1")
+                    self.Distribuidores = Distribuidor(v_Num_Distri=Num_Distri, v_ruta=self.ruta,  Columnas=[
+                                                'folio',
+                                                'fecha_Facturacion',
+                                                'volumen_Facturado',
+                                                'unidad_Medida',
+                                                'valorT_Facturado',
+                                                'rfc',
+                                                'nombre_Cliente',
+                                                'codeProduct_Distribuidor',
+                                                'localidad',
+                                                'sucursal',
+                                                'nombre_Vendedor_Distribuidor',
+                                                'linea_Producto',
+                                                'marca',
+                                                'pais',
+                                                'numero_Convenio'])
+                    
+                    if self.Distribuidores.Num_Distri == Num_Distri:
                         print("Inicialización de transformación...")
-                        Name_Distri = 'ECUATORIANA DE PROD. QUIM. S.A'
-                        Name_short = 'Ecuaquimica'
-                        if distribuidor[self.Ecuaquimica.Columnas[0]].isnull().any() or distribuidor[self.Ecuaquimica.Columnas[10]].isnull().any():
-                            self.mostrar_error()
-                        else:
-                            df = self.Ecuaquimica.Ecuaqui_Clean(distribuidor, self.Ecuaquimica.Columnas)
+                        # Obtener el Nombre de distribuidor.
+                        self.soldTo = pd.read_excel(Path(self.ruta_abs, "Requirements", "Base clientes.xlsx"), sheet_name=0)
+                        print("Tipo de dato de Número de distribuidores: ", Num_Distri)
+                        Name_Distri_aux=self.soldTo[self.soldTo["Num_Distri"]==int(Num_Distri)]
+                        Name_Distri = list(Name_Distri_aux["Name_Distri"])
+                        Name_Distri=Name_Distri[0]
+            
+                        print("Nombre del distribuidor: ", Name_Distri)
                             
-                            indice = ruta.rfind(".xlsx")
-                            nueva_ruta = ruta[:indice - 1]
-                            print(nueva_ruta)
+                        if 'folio' not in distribuidor.columns:
+                            df = self.Distribuidores.Mexico(distribuidor, self.Distribuidores.Columnas)
                             
-                            self.json_conver(ruta=nueva_ruta, df=df, name_distri=Name_Distri, num_distri=Num_Distri)
-                            
-                            print("Procedimiento finalizado con exito...")
-                            sys.exit()
-                    # Modulo para Agripac
-                    elif self.Agripac.Num_Distri == Num_Distri:
-                        print("Inicialización de transformación...")
-                        Name_Distri = 'AGRIPAC, S.A.'
-                        Name_short = 'Agripac'
-                        # print(distribuidor[self.Agripac.Columnas[0]].isnull().any())
-                        if distribuidor[self.Agripac.Columnas[0]].isnull().any() or distribuidor[self.Agripac.Columnas[1]].isnull().any():
-                            self.mostrar_error()
-                        else:
-                            df = self.Agripac.Agripa_clean(distribuidor, self.Agripac.Columnas)
                             
                             indice = ruta.rfind(".xlsx")
                             nueva_ruta = ruta[:indice]
                             print(nueva_ruta)
                             
                             self.json_conver(ruta=nueva_ruta, df=df, name_distri=Name_Distri, num_distri=Num_Distri)
+                            
                             print("Procedimiento finalizado con exito...")
                             sys.exit()
-                    elif self.LofAgro.Num_Distri == Num_Distri:
-                        print("Inicialización de transformación...")
-                        Name_Distri = 'LOFAGRO'
-                        Name_short = 'LofAgro'
-                        if distribuidor[self.LofAgro.Columnas[0]].isnull().any() or distribuidor[self.LofAgro.Columnas[1]].isnull().any():
+                        elif distribuidor[self.Distribuidores.Columnas[0]].isnull().any() or distribuidor[self.Distribuidores.Columnas[10]].isnull().any():
                             self.mostrar_error()
                         else:
-                            df = self.LofAgro.Mexico(distribuidor, self.LofAgro.Columnas)
+                            df = self.Distribuidores.Mexico(distribuidor, self.Distribuidores.Columnas)
                             
                             indice = ruta.rfind(".xlsx")
-                            nueva_ruta = ruta[:indice - 1]
+                            nueva_ruta = ruta[:indice]
                             print(nueva_ruta)
                             
                             self.json_conver(ruta=nueva_ruta, df=df, name_distri=Name_Distri, num_distri=Num_Distri)
-                            print("Procedimiento finalizado con exito...")
-                            sys.exit()
-                    elif self.DIEGO_FRANCO_LEAL.Num_Distri == Num_Distri:
-                        print("Inicialización de transformación...")
-                        Name_Distri = 'DIEGO FRANCO LEAL GARCIA'
-                        Name_short = 'DIEGO FRANCO LEAL GARCIA'
-                        if distribuidor[self.DIEGO_FRANCO_LEAL.Columnas[0]].isnull().any() or distribuidor[self.DIEGO_FRANCO_LEAL.Columnas[1]].isnull().any():
-                            self.mostrar_error()
-                        else:
-                            df = self.DIEGO_FRANCO_LEAL.Mexico(distribuidor, self.DIEGO_FRANCO_LEAL.Columnas)
                             
-                            indice = ruta.rfind(".xlsx")
-                            nueva_ruta = ruta[:indice - 1]
-                            print(nueva_ruta)
-                            
-                            self.json_conver(ruta=nueva_ruta, df=df, name_distri=Name_Distri, num_distri=Num_Distri)
-                            print("Procedimiento finalizado con exito...")
-                            sys.exit()
-                    elif self.Tepeyac.Num_Distri == Num_Distri:
-                        print("Inicialización de transformación...")
-                        Name_Distri = 'Tepeyac'
-                        Name_short = 'Tepeyac'
-                        if distribuidor[self.Tepeyac.Columnas[0]].isnull().any() or distribuidor[self.Tepeyac.Columnas[1]].isnull().any():
-                            self.mostrar_error()
-                        else:
-                            df = self.Tepeyac.Mexico(distribuidor, self.Tepeyac.Columnas)
-                            
-                            indice = ruta.rfind(".xlsx")
-                            nueva_ruta = ruta[:indice - 1]
-                            print(nueva_ruta)
-                            
-                            self.json_conver(ruta=nueva_ruta, df=df, name_distri=Name_Distri, num_distri=Num_Distri)
                             print("Procedimiento finalizado con exito...")
                             sys.exit()
                     else:
