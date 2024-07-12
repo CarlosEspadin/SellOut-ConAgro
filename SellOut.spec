@@ -5,7 +5,7 @@ a = Analysis(
     ['SellOut.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[('Recursos', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -34,5 +34,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['Icons\\ConAgro_icon_big.png'],
+    icon=['Recursos\\Icons\\ConAgro_icon_big.png'],
 )

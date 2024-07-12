@@ -11,7 +11,7 @@ pip install pyinstaller
 4. Ejecutar el siguiente comando en consola:
 
 ```bash
-pyinstaller --windowed --onefile --icon=./Icons/ConAgro_icon_big.png SellOut.py
+pyinstaller --noconfirm --onefile --windowed --icon "C:\Users\carlo\OneDrive\Documentos\SellOut ConAgro\Recursos\Icons\ConAgro.ico" --add-data "C:\Users\carlo\OneDrive\Documentos\SellOut ConAgro\Base clientes.xlsx;." --add-data "C:\Users\carlo\OneDrive\Documentos\SellOut ConAgro\ConAgro_icon_big.png;." --add-data "C:\Users\carlo\OneDrive\Documentos\SellOut ConAgro\ConAgro_icon_small.png;."  "C:\Users\carlo\OneDrive\Documentos\SellOut ConAgro\SellOut.py"
 ```
 ## Resultado.
 

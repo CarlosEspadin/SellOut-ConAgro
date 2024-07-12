@@ -15,7 +15,6 @@ from tkinter import ttk
 import traceback
 import sys
 import time
-from pathlib import Path
 
 # Definimos la clase Distribuidor, esta clase nos permite instanciar los nombres de las columnas de cada distribuidor y que se ajuste al LayOut correspondiente, siento la llave principal v_Num_Distri.
 # Retomar la construcción de la clase Distribuidor.
@@ -39,7 +38,7 @@ class Distribuidor:
         return [str(random.randint(0, 99)) + str(random.randint(0, 99)) for _ in range(n)]
     
     # Metodo para subir información de los demás distribuidores de México
-    def Mexico(self, distribuidor, Columnas):
+    def Sell_Out(self, distribuidor, Columnas):
         # Condición para Ecuaquimica
         if 'MES' in distribuidor.columns and 'año' in distribuidor.columns:
             # Generación de folio sintentico unicos.
@@ -75,7 +74,6 @@ class Distribuidor:
             distribuidor['pais'] = 'Ecuador'
             distribuidor['marca'] = 'Syngenta'
             distribuidor = distribuidor.rename(columns={'fechaFactura': 'fecha_Facturacion'})
-            # distribuidor = distribuidor.rename(columns={'fechaFactura': 'fecha_Facturacion', Columnas[12]: 'volumen_Facturado', Columnas[11]: 'valorT_Facturado', Columnas[5]: 'nombre_Cliente', Columnas[3]: 'nombre_Vendedor_Distribuidor', Columnas[7]: 'codeProduct_Distribuidor', Columnas[6]: 'rfc', Columnas[1]: 'localidad'})
             distribuidor['unidad_Medida'] = ""
             distribuidor['sucursal'] = ""
             distribuidor['linea_Producto'] = ""
@@ -121,14 +119,6 @@ class Distribuidor:
             distribuidor['pais']='Ecuador'
             distribuidor['marca'] = 'Syngenta'
             distribuidor = distribuidor.rename(columns={'fechaFactura': 'fecha_Facturacion'})
-            #CAMBIO A LAYOUT DE CARGA PARA WS
-            # distribuidor = distribuidor.rename(columns={'fechaFactura': 'fecha_Facturacion',
-            #                                         Columnas[11]: 'volumen_Facturado',
-            #                                         Columnas[12]: 'valorT_Facturado',
-            #                                         Columnas[6]: 'nombre_Cliente',
-            #                                         Columnas[3]: 'nombre_Vendedor_Distribuidor',
-            #                                         Columnas[9]: 'codeProduct_Distribuidor',
-            #                                         Columnas[7]: 'rfc'})
             distribuidor['unidad_Medida'] = ""
             distribuidor['sucursal'] = ""
             distribuidor['linea_Producto'] = ""
@@ -156,16 +146,25 @@ class VentanaIntroduccion(tk.Toplevel):
     def habilitar(self):
         self.boton_continuar.config(state=tk.ACTIVE)
     
+    def resource_path(self,relative_path):
+        """ Get absolute path to resource, works for dev and for PyInstaller """
+        try:
+            # PyInstaller creates a temp folder and stores path in _MEIPASS
+            self.base_path = sys._MEIPASS
+        except Exception:
+            self.base_path = os.path.abspath(".")
+        return os.path.join(self.base_path, relative_path)
+    
     def __init__(self, parent, app):
-        self.ruta_abs = Path(__file__)
-        self.ruta_abs = self.ruta_abs.parent
+        self.ruta_ico_s = self.resource_path("ConAgro_icon_small.png")
+        self.ruta_ico_b = self.resource_path("ConAgro_icon_big.png")
         super().__init__(parent)
         self.title("Introducción a la Aplicación")
         self.app = app  # Referencia a la aplicación principal
         self.configure(bg="white", relief="sunken", highlightcolor="green")
         # configure icon
-        self.icon_big = tk.PhotoImage(file=Path(self.ruta_abs,"Icons","ConAgro_icon_big.png"))
-        self.icon_small = tk.PhotoImage(file=Path(self.ruta_abs,"Icons","ConAgro_icon_small.png"))
+        self.icon_big = tk.PhotoImage(file=self.ruta_ico_b)
+        self.icon_small = tk.PhotoImage(file=self.ruta_ico_s)
         self.iconphoto(False, self.icon_big, self.icon_small)
         
         # Agregar texto explicativo
@@ -199,6 +198,16 @@ class VentanaIntroduccion(tk.Toplevel):
 # Unimos ambas clases por composión, Esto es útil cuando quieres utilizar los métodos y atributos de Distribuidor dentro de App, pero App no es un tipo de Distribuidor.
 
 class App(tk.Tk):
+    def resource_path(self,relative_path):
+        """ Get absolute path to resource, works for dev and for PyInstaller """
+        try:
+            # PyInstaller creates a temp folder and stores path in _MEIPASS
+            self.base_path = sys._MEIPASS
+        except Exception:
+            self.base_path = os.path.abspath(".")
+
+        return os.path.join(self.base_path, relative_path)
+    
     def __init__(self):
         super().__init__()
         self.title("Sell Out to Web Service")
@@ -265,12 +274,12 @@ class App(tk.Tk):
         self.style.configure('TButton', font=('Helvetica', 11)) 
         
         # Establecemos la ruta absoluta:
-        self.ruta_abs = Path(__file__)
-        self.ruta_abs = self.ruta_abs.parent
+        self.ruta_ico_s = self.resource_path("ConAgro_icon_small.png")
+        self.ruta_ico_b = self.resource_path("ConAgro_icon_big.png")
         
         # configure icon
-        self.icon_big = tk.PhotoImage(file=Path(self.ruta_abs,"Icons","ConAgro_icon_big.png"))
-        self.icon_small = tk.PhotoImage(file=Path(self.ruta_abs,"Icons","ConAgro_icon_small.png"))
+        self.icon_big = tk.PhotoImage(file=self.ruta_ico_b)
+        self.icon_small = tk.PhotoImage(file=self.ruta_ico_s)
         self.iconphoto(False, self.icon_big, self.icon_small)
     
     # Método para cerrar la venta App.
@@ -371,7 +380,7 @@ class App(tk.Tk):
         if os.path.exists(nueva_ruta):
             # Mensaje si existe el archivo
             self.msj_json(nueva_ruta)
-            # self.to_web_service(concatenado_data_json) # Comentar para pruebas.
+            self.to_web_service(concatenado_data_json) # Comentar para pruebas.
         else:
             # Mensaje si no esite el archivo
             self.error_json()
@@ -380,7 +389,7 @@ class App(tk.Tk):
     
                 
     def principal(self):  # sourcery skip: extract-method
-        self.iniciar_app()
+        self.iniciar_app()# sourcery skip: extract-duplicate-method, extract-methodate-method, extract-method
         # Deshabilitamos el boton aceptar para que no se pueda usar más de una vez.
         self.B2.config(state=tk.DISABLED)
         ## Almacenamos las variables globales para su posterior uso.
@@ -391,7 +400,6 @@ class App(tk.Tk):
         v1 = self.ruta.get()
         v2 = self.num_distri.get()  # Cambia 'distri_label' a 'distri_entry'
         ruta = v1
-        # ruta = Path(ruta)
         Num_Distri = v2
         ## Verificacion:
         print("Ruta del archivo:", ruta)
@@ -428,7 +436,8 @@ class App(tk.Tk):
                     if self.Distribuidores.Num_Distri == Num_Distri:
                         print("Inicialización de transformación...")
                         # Obtener el Nombre de distribuidor.
-                        self.soldTo = pd.read_excel(Path(self.ruta_abs, "Requirements", "Base clientes.xlsx"), sheet_name=0)
+                        self.ruta_base = self.resource_path("Base clientes.xlsx")
+                        self.soldTo = pd.read_excel(self.ruta_base, sheet_name=0)
                         print("Tipo de dato de Número de distribuidores: ", Num_Distri)
                         Name_Distri_aux=self.soldTo[self.soldTo["Num_Distri"]==int(Num_Distri)]
                         Name_Distri = list(Name_Distri_aux["Name_Distri"])
@@ -437,8 +446,7 @@ class App(tk.Tk):
                         print("Nombre del distribuidor: ", Name_Distri)
                             
                         if 'folio' not in distribuidor.columns:
-                            df = self.Distribuidores.Mexico(distribuidor, self.Distribuidores.Columnas)
-                            
+                            df = self.Distribuidores.Sell_Out(distribuidor, self.Distribuidores.Columnas)
                             
                             indice = ruta.rfind(".xlsx")
                             nueva_ruta = ruta[:indice]
@@ -451,7 +459,7 @@ class App(tk.Tk):
                         elif distribuidor[self.Distribuidores.Columnas[0]].isnull().any() or distribuidor[self.Distribuidores.Columnas[10]].isnull().any():
                             self.mostrar_error()
                         else:
-                            df = self.Distribuidores.Mexico(distribuidor, self.Distribuidores.Columnas)
+                            df = self.Distribuidores.Sell_Out(distribuidor, self.Distribuidores.Columnas)
                             
                             indice = ruta.rfind(".xlsx")
                             nueva_ruta = ruta[:indice]
@@ -463,7 +471,7 @@ class App(tk.Tk):
                             sys.exit()
                     else:
                         self.Cliente_Not_foud()
-                else: # Proceso para SellOut.
+                else: # Proceso para Inventarios
                     print("Test...")
                     sys.exit()
             except FileNotFoundError as e1:
