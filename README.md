@@ -1,5 +1,5 @@
 # SellOut-ConAgro
-Este repositorio contiene el código fuente y el archivo ejecutable del proyecto de GUI que limpia, transforma y sube la información de SellOut de los distribuidores de Syngenta al web service de ConAgro
+This repository contains the source code and executable file of the GUI project that cleans, transforms and uploads the SellOut information from Syngenta distributors to the ConAgro web service.
 # Foobar
 
 This Python application is designed to manually upload distributor information to the ConAgro service. It provides a graphical user interface (GUI) for users to input the path to an Excel file and a distributor number, processes the data according to the distributor's layout, and then uploads the data to a web service in JSON format.
