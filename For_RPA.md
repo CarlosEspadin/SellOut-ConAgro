@@ -24,7 +24,7 @@ To run the desktop application, the user must double-click the executable file o
 | **nombre_Cliente**   | Varchar   | This field is optional.   |
 | **codeProduct_Distribuidor**   | Varchar   | This field is required.   |
 | **localidad**   | Varchar   | This field is optional.  |
-| **sucursal**   | Varchar   | This field is optional.  |
+| **sucursal**   | Varchar   | This field is optional.  |<zxcvbnm,.-  ->
 | **nombre_Vendedor_Distribuidor**   | Varchar   | This field is optional.   |
 | **linea_Producto**   | Varchar   | This field is optional.   |
 | **marca**   | Varchar   | This field is required. Your value should always be Syngenta**   |

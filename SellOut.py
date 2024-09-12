@@ -43,12 +43,13 @@ class Distribuidor:
     # Metodo para subir información de los demás distribuidores de México
     def Sell_Out(self, distribuidor, Columnas):
         # Condición para Ecuaquimica
-        if 'MES' in distribuidor.columns and 'año' in distribuidor.columns:
+        if int(distribuidor['clave_Distribuidor'][0])==61610097:
             # Generación de folio sintentico unicos.
             distribuidor['folio'] = ""
             # Casteamos y redondeamos los datos númericos.
-            distribuidor['MES'] = distribuidor['MES'].astype(int) # año
-            distribuidor['año'] = distribuidor['año'].astype(int)  # mes
+            distribuidor[['Año', 'Mes', 'Dia']] = distribuidor['fecha_Facturacion'].str.split('-', expand=True)
+            distribuidor['Mes'] = distribuidor['Mes'].astype(int) # año
+            distribuidor['Año'] = distribuidor['Año'].astype(int)  # mes
             # Sustitucion de valores null por "" o por 0 para valores str y num.
             distribuidor["rfc"] = distribuidor["rfc"].fillna(0)
             distribuidor["valorT_Facturado"] = distribuidor["valorT_Facturado"].fillna(0)
@@ -57,14 +58,14 @@ class Distribuidor:
                 n = len(distribuidor["codeProduct_Distribuidor"])
                 aleatorios = self.lista_aleatorios(n)
                 # np.random.seed(22)
-                n = len(distribuidor["MES"])
+                n = len(distribuidor["Mes"])
                 aleatorios1 = self.lista_aleatorios(n)
                 Marcas1 = pd.DataFrame(distribuidor["codeProduct_Distribuidor"].unique().tolist(), columns=["codeProduct_Distribuidor"])
                 Marcas1['ID'] = Marcas1.index
                 distribuidor = distribuidor.merge(Marcas1, on="codeProduct_Distribuidor", how='left')
                 print(distribuidor)
                 distribuidor['Index'] = aleatorios1
-                distribuidor['folio'] = distribuidor.apply(lambda row: ''.join(map(str, [row["año"], row["MES"], row["rfc"], row['ID'], row['Index']])), axis=1)
+                distribuidor['folio'] = distribuidor.apply(lambda row: ''.join(map(str, [row["Año"], row["Mes"], row["rfc"], row['ID'], row['Index']])), axis=1)
                 if not distribuidor['folio'].duplicated().any():
                     break
                 else:
@@ -72,11 +73,11 @@ class Distribuidor:
             
             self.df_Mes = self.df_Mes.rename(columns={'Mes': 'MES'})
             distribuidor = distribuidor.merge(self.df_Mes, on='MES', how='left')
-            distribuidor['fechaFactura'] = distribuidor["año"].astype(str) + '-' + distribuidor['Num'].astype(str) + '-01'
-            distribuidor['fechaFactura'] = distribuidor['fechaFactura'].astype(str)
+            # distribuidor['fechaFactura'] = distribuidor["año"].astype(str) + '-' + distribuidor['Num'].astype(str) + '-01'
+            # distribuidor['fechaFactura'] = distribuidor['fechaFactura'].astype(str)
             distribuidor['pais'] = 'Ecuador'
-            distribuidor['marca'] = 'Syngenta'
-            distribuidor = distribuidor.rename(columns={'fechaFactura': 'fecha_Facturacion'})
+            distribuidor['marca'] = 'Syngenta_xlsx'
+            # distribuidor = distribuidor.rename(columns={'fechaFactura': 'fecha_Facturacion'})
             distribuidor['unidad_Medida'] = ""
             distribuidor['sucursal'] = ""
             distribuidor['linea_Producto'] = ""
@@ -86,9 +87,12 @@ class Distribuidor:
             distribuidor['rfc'] = distribuidor['rfc'].astype(str)
             columnas_deseadas = Columnas
         # Casp para Agripac
-        elif 'Mes' in distribuidor.columns and 'Año' in distribuidor.columns:
+        elif int(distribuidor['clave_Distribuidor'][0])==61610107:
             ## Verificacion para que solo se den folios distintos con un bucle infinito que para hasta que folio tenga solo valores distintos
             distribuidor['folio'] = ""
+            distribuidor[['Año', 'Mes', 'Dia']] = distribuidor['fecha_Facturacion'].str.split('-', expand=True)
+            distribuidor['Mes'] = distribuidor['Mes'].astype(int) # año
+            distribuidor['Año'] = distribuidor['Año'].astype(int)  # mes
             # Sustitución de valores null por "" o por 0 para valores str y num respectivamente.
             distribuidor["rfc"] = distribuidor["rfc"].fillna(0)
             distribuidor["volumen_Facturado"] = distribuidor["volumen_Facturado"].fillna(0)
@@ -114,20 +118,21 @@ class Distribuidor:
             #Verificacion por consola.
             print("Presencia de repetidos:", distribuidor['folio'].duplicated().any())
             ### Trasnformacion de datos de tipo fecha y el mes:
-            distribuidor = distribuidor.merge(self.df_Mes, on='Mes', how='left')
+            # distribuidor = distribuidor.merge(self.df_Mes, on='Mes', how='left')
             ### Trasnformacion de datos de tipo fecha:
-            distribuidor['fechaFactura'] = distribuidor["Año"].astype(str) + '-' + distribuidor['Num'].astype(str)+'-01'
-            distribuidor['fechaFactura'] = distribuidor['fechaFactura'].astype(str)
+            # distribuidor['fechaFactura'] = distribuidor["Año"].astype(str) + '-' + distribuidor['Num'].astype(str)+'-01'
+            # distribuidor['fecha_Facturacion'] = distribuidor['fecha_Facturacion'].astype(str)
             ## Datos distribuidor
             distribuidor['pais']='Ecuador'
-            distribuidor['marca'] = 'Syngenta'
-            distribuidor = distribuidor.rename(columns={'fechaFactura': 'fecha_Facturacion'})
+            distribuidor['marca'] = 'Syngenta_xlsx'
+            # distribuidor = distribuidor.rename(columns={'fechaFactura': 'fecha_Facturacion'})
             distribuidor['unidad_Medida'] = ""
             distribuidor['sucursal'] = ""
             distribuidor['linea_Producto'] = ""
             distribuidor['numero_Convenio'] = ""
             distribuidor['localidad']= ""
-            distribuidor['fecha_Facturacion'] = distribuidor['fecha_Facturacion'].astype(str)
+            distribuidor['fecha_Facturacion'] = pd.to_datetime(distribuidor['fecha_Facturacion'], format="%Y-%m-%d")
+            distribuidor['fecha_Facturacion'] = distribuidor['fecha_Facturacion'].sort_values().apply(lambda x: x.strftime("%Y-%m-%d"))
             distribuidor['rfc'] = distribuidor['rfc'].astype(str)
             # Comprobación del dataframe que se esta exportando.
             columnas_deseadas = Columnas
@@ -135,9 +140,11 @@ class Distribuidor:
         # Caso para todos los demás distribuidores provenientes de méxico
         else:
             columnas_deseadas = Columnas
+            distribuidor['fecha_Facturacion'] = pd.to_datetime(distribuidor['fecha_Facturacion'], format="%Y-%m-%d")
             distribuidor['fecha_Facturacion'] = distribuidor['fecha_Facturacion'].sort_values().apply(lambda x: x.strftime("%Y-%m-%d"))
         
         df = distribuidor[columnas_deseadas]
+        distribuidor['marca'] = 'Syngenta_xlsx'
         
         print(distribuidor.columns)
         print(df)
@@ -285,6 +292,7 @@ class App(tk.Tk):
         self.labelPerfil = tk.Label(self.menu_lateral, image=self.ico_Home, bg="#abb400")
         self.labelPerfil.pack(side=tk.TOP, pady=10)
 
+        
         # Crear los botones con icono y texto
         self.buttonDashBoard = self.create_menu_button(self.menu_lateral, "Inicio", self.ico_Step1, self.create_greeting_message, "2")
         self.bottonSync = self.create_menu_button(self.menu_lateral, "SellOut", self.ico_Step2, self.create_greeting_message, "0")
@@ -459,31 +467,44 @@ class App(tk.Tk):
 
     # Ventana de error si el número de cliente ingresado no existe.
     def Cliente_Not_foud(self):  # sourcery skip: class-extract-method
+        self.withdraw()
         messagebox.showerror("Error", "El cliente que estás ingresando no está registrado en ConAgro")
         self.after(30000, self.cerrar_ventana)
         sys.exit()
     # Ventana que muestra error si la ruta del archivo es incorrecta.
     def mostrar_error(self):
+        self.withdraw()
         messagebox.showerror("Error", "La ruta del archivo o el número de distribuidor no son válidos. Por favor vuelve a ejecutar el programa e ingresa los valores adecuador.")
         self.after(30000, self.cerrar_ventana)
         sys.exit()
     # Venta que se muestra si el archivo ingresado es de un tipo incorrecto o simplemente no existe.
     def error_Archivo(self):
+        self.withdraw()
         messagebox.showerror("Error", "Archivo no permitido, por favor vuelve a ejecutar el programa ingresando un archivo de tipo .xlsx")
         self.after(30000, self.cerrar_ventana)
         sys.exit()   
     # Ventana que se muestra si el layout de excel no es el correcto.
     def error_columnas(self):
+        self.withdraw()
         messagebox.showerror("Error", "El nombre de los encabezados no coincide, reportar al administrador.")
         self.after(30000, self.cerrar_ventana)
         sys.exit()
+    # Ventana que se muestra si el layout de excel no es el correcto.
+    def error_fechas(self):
+        self.withdraw()
+        messagebox.showerror("Error", "Registros vacíos en la columna de fecha, informar a los administradores.")
+        self.after(30000, self.cerrar_ventana)
+        sys.exit()  
+    
     # Funcion para mostrar error si no se creo el json correctamente:
     def error_json(self):
+        self.withdraw()
         messagebox.showerror("Error", "El Json no se creo de manera adecuada.")
         self.after(30000, self.cerrar_ventana)
         sys.exit()
     # Esta vwenta se muestra si el archivo Json no se cargo correctamente en el web service.
     def error_WebService(self, msj_web):
+        self.withdraw()
         messagebox.showerror("Error", msj_web)
         self.after(30000, self.cerrar_ventana)
         sys.exit()
@@ -591,9 +612,14 @@ class App(tk.Tk):
             try:
                 print("Inicio de procesamiento...")
                 # Empezamos leyendo el archivo de Excel que se proporciona el RPA.
-                distribuidor = pd.read_excel(ruta,sheet_name=0)
+                if not os.path.isfile(ruta):
+                    raise FileNotFoundError(f"El archivo no existe: {ruta}")
+                else:
+                    distribuidor = pd.read_excel(ruta,sheet_name=0)
                 print(distribuidor.columns)
                 if v_Tipo == 'SellOut':
+                    if distribuidor['fecha_Facturacion'].isnull().any() or distribuidor['fecha_Facturacion'].any() == "":
+                        self.error_fechas()
                 # Modulo General.
                     print("Validación 1")
                     self.Distribuidores = Distribuidor(v_Num_Distri=Num_Distri, v_ruta=self.ruta,  Columnas=[
@@ -638,7 +664,8 @@ class App(tk.Tk):
                             
                             print("Procedimiento finalizado con exito...")
                             sys.exit()
-                        elif distribuidor[self.Distribuidores.Columnas[0]].isnull().any() or distribuidor[self.Distribuidores.Columnas[10]].isnull().any():
+                        elif distribuidor[self.Distribuidores.Columnas[0]].isnull().any() or distribuidor[self.Distribuidores.Columnas[1]].isnull().any():
+                            print("Columnas vacias ", self.Distribuidores.Columnas[0], " y ", self.Distribuidores.Columnas[1])
                             self.mostrar_error()
                         else:
                             df = self.Distribuidores.Sell_Out(distribuidor, self.Distribuidores.Columnas)
@@ -710,7 +737,7 @@ class App(tk.Tk):
                     else:
                         self.Cliente_Not_foud()
                     sys.exit()
-            except FileNotFoundError as e1:
+            except FileNotFoundError or PermissionError as e1:
                 traceback.print_exc()
                 self.error_Archivo()
             except IndexError as e2:
@@ -720,7 +747,12 @@ class App(tk.Tk):
                 traceback.print_exc()
                 self.error_columnas()
             except TypeError as e4:
+                traceback.print_exc()
                 self.mostrar_error()
+            except ValueError as e5:
+                traceback.print_exc()
+                self.Cliente_Not_foud()
+
 
 
 # Inicialización de la clase App        
