@@ -71,8 +71,8 @@ class Distribuidor:
                 else:
                     distribuidor.drop(columns=["ID"], inplace=True)
             
-            self.df_Mes = self.df_Mes.rename(columns={'Mes': 'MES'})
-            distribuidor = distribuidor.merge(self.df_Mes, on='MES', how='left')
+            # # self.df_Mes = self.df_Mes.rename(columns={'Mes': 'MES'})
+            # distribuidor = distribuidor.merge(self.df_Mes, on='MES', how='left')
             # distribuidor['fechaFactura'] = distribuidor["año"].astype(str) + '-' + distribuidor['Num'].astype(str) + '-01'
             # distribuidor['fechaFactura'] = distribuidor['fechaFactura'].astype(str)
             distribuidor['pais'] = 'Ecuador'
@@ -143,8 +143,8 @@ class Distribuidor:
             distribuidor['fecha_Facturacion'] = pd.to_datetime(distribuidor['fecha_Facturacion'], format="%Y-%m-%d")
             distribuidor['fecha_Facturacion'] = distribuidor['fecha_Facturacion'].sort_values().apply(lambda x: x.strftime("%Y-%m-%d"))
         
-        df = distribuidor[columnas_deseadas]
         distribuidor['marca'] = 'Syngenta_xlsx'
+        df = distribuidor[columnas_deseadas]
         
         print(distribuidor.columns)
         print(df)
