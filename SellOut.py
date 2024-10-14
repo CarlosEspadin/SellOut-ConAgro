@@ -152,6 +152,7 @@ class Distribuidor:
 
     def Stocks(self, distribuidor, Columnas):
             columnas_deseadas = Columnas
+            distribuidor['fecha_Inventario'] = pd.to_datetime(distribuidor['fecha_Inventario'], format="%Y-%m-%d")
             distribuidor['fecha_Inventario'] = distribuidor['fecha_Inventario'].sort_values().apply(lambda x: x.strftime("%Y-%m-%d"))
         
             df = distribuidor[columnas_deseadas]
