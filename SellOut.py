@@ -131,8 +131,13 @@ class Distribuidor:
             distribuidor['linea_Producto'] = ""
             distribuidor['numero_Convenio'] = ""
             distribuidor['localidad']= ""
-            distribuidor['fecha_Facturacion'] = pd.to_datetime(distribuidor['fecha_Facturacion'], format="%Y-%m-%d")
-            distribuidor['fecha_Facturacion'] = distribuidor['fecha_Facturacion'].sort_values().apply(lambda x: x.strftime("%Y-%m-%d"))
+            distribuidor['fecha_Facturacion'] = distribuidor['fecha_Facturacion'].apply(self.convertir_fechas)
+            # distribuidor['fecha_Facturacion'] = distribuidor['fecha_Facturacion'].sort_values().apply(lambda x: x.strftime("%Y-%m-%d"))
+            if distribuidor['fecha_Facturacion'].isna().any():
+                validv = True
+            else:
+                validv = False
+                distribuidor['fecha_Facturacion'] = distribuidor['fecha_Facturacion'].sort_values().apply(lambda x: x.strftime("%Y-%m-%d"))
             distribuidor['rfc'] = distribuidor['rfc'].astype(str)
             # Comprobación del dataframe que se esta exportando.
             columnas_deseadas = Columnas
@@ -140,26 +145,52 @@ class Distribuidor:
         # Caso para todos los demás distribuidores provenientes de méxico
         else:
             columnas_deseadas = Columnas
-            distribuidor['fecha_Facturacion'] = pd.to_datetime(distribuidor['fecha_Facturacion'], format="%Y-%m-%d")
-            distribuidor['fecha_Facturacion'] = distribuidor['fecha_Facturacion'].sort_values().apply(lambda x: x.strftime("%Y-%m-%d"))
-        
+            distribuidor['fecha_Facturacion'] = distribuidor['fecha_Facturacion'].apply(self.convertir_fechas)
+            # distribuidor['fecha_Facturacion'] = distribuidor['fecha_Facturacion'].sort_values().apply(lambda x: x.strftime("%Y-%m-%d"))
+            if distribuidor['fecha_Facturacion'].isna().any():
+                validv = True
+            else:
+                validv = False
+                distribuidor['fecha_Facturacion'] = distribuidor['fecha_Facturacion'].sort_values().apply(lambda x: x.strftime("%Y-%m-%d"))
+            # distribuidor['codeProduct_Distribuidor'].astype(str)
+            # distribuidor['codeProduct_Distribuidor'] = distribuidor['codeProduct_Distribuidor'].str.upper()
         distribuidor['marca'] = 'Syngenta_xlsx'
+        distribuidor['clave_Distribuidor'] = distribuidor['clave_Distribuidor'].astype(int)
         df = distribuidor[columnas_deseadas]
         
         print(distribuidor.columns)
         print(df)
-        return df
+        return df, validv
 
     def Stocks(self, distribuidor, Columnas):
+        
             columnas_deseadas = Columnas
-            distribuidor['fecha_Inventario'] = pd.to_datetime(distribuidor['fecha_Inventario'], format="%Y-%m-%d")
-            distribuidor['fecha_Inventario'] = distribuidor['fecha_Inventario'].sort_values().apply(lambda x: x.strftime("%Y-%m-%d"))
+            distribuidor['fecha_Inventario'] = distribuidor['fecha_Inventario'].apply(self.convertir_fechas)
+            if distribuidor['fecha_Inventario'].isna().any():
+                validv = True
+            else:
+                validv = False
+                distribuidor['fecha_Inventario'] = distribuidor['fecha_Inventario'].sort_values().apply(lambda x: x.strftime("%Y-%m-%d"))
+            # distribuidor['fecha_Inventario'] = pd.to_datetime(distribuidor['fecha_Inventario'], format="%Y-%m-%d")
+            # distribuidor['fecha_Inventario'] = distribuidor['fecha_Inventario'].sort_values().apply(lambda x: x.strftime("%Y-%m-%d"))
         
             df = distribuidor[columnas_deseadas]
             
             print(distribuidor.columns)
             print(df)
-            return df
+            return df, validv
+        
+    def convertir_fechas(self,fecha):
+        formatos = ["%Y-%m-%d"]  # Lista de formatos posibles.
+        for formato in formatos:
+            try:
+                # Intentar convertir usando el formato actual.
+                return pd.to_datetime(fecha, format=formato)
+            except ValueError:
+                # Si falla, sigue intentando con el siguiente formato.
+                continue
+        # Si no coincide con ningún formato, devolver la fecha original o NaT.
+        return pd.NaT
 
 # Clase App Iterface visual
 class App(tk.Tk):
@@ -472,10 +503,16 @@ class App(tk.Tk):
         messagebox.showerror("Error", "El cliente que estás ingresando no está registrado en ConAgro")
         self.after(30000, self.cerrar_ventana)
         sys.exit()
+    # Ventana de error si el archivo para subir a ConAgro se encuentra abierto en tiempo de ejecución.
+    def archivo_abierto_e(self):  # sourcery skip: class-extract-method
+        self.withdraw()
+        messagebox.showerror("Error", "El archivo para cargar en ConAgro se encuentra abierto, cierralo y vuelve a ejecutar el programa")
+        self.after(30000, self.cerrar_ventana)
+        sys.exit()
     # Ventana que muestra error si la ruta del archivo es incorrecta.
     def mostrar_error(self):
         self.withdraw()
-        messagebox.showerror("Error", "La ruta del archivo o el número de distribuidor no son válidos. Por favor vuelve a ejecutar el programa e ingresa los valores adecuador.")
+        messagebox.showerror("Error", "La ruta del archivo o el archivo para cargar en ConAgro se encuentra abierto. Por favor vuelve a ejecutar el programa e ingresa los valores adecuador.")
         self.after(30000, self.cerrar_ventana)
         sys.exit()
     # Venta que se muestra si el archivo ingresado es de un tipo incorrecto o simplemente no existe.
@@ -495,8 +532,14 @@ class App(tk.Tk):
         self.withdraw()
         messagebox.showerror("Error", "Registros vacíos en la columna de fecha, informar a los administradores.")
         self.after(30000, self.cerrar_ventana)
-        sys.exit()  
-    
+        sys.exit()
+        
+    def error_fechas_format(self):
+        self.withdraw()
+        messagebox.showerror("Error", "Formato de fecha es inconsistente, por favor informa a los administradores.")
+        self.after(30000, self.cerrar_ventana)
+        sys.exit()
+        
     # Funcion para mostrar error si no se creo el json correctamente:
     def error_json(self):
         self.withdraw()
@@ -617,10 +660,11 @@ class App(tk.Tk):
                     raise FileNotFoundError(f"El archivo no existe: {ruta}")
                 else:
                     distribuidor = pd.read_excel(ruta,sheet_name=0)
-                print(distribuidor.columns)
+                print(distribuidor)
                 if v_Tipo == 'SellOut':
                     if distribuidor['fecha_Facturacion'].isnull().any() or distribuidor['fecha_Facturacion'].any() == "":
                         self.error_fechas()
+                        
                 # Modulo General.
                     print("Validación 1")
                     self.Distribuidores = Distribuidor(v_Num_Distri=Num_Distri, v_ruta=self.ruta,  Columnas=[
@@ -653,9 +697,14 @@ class App(tk.Tk):
                         Name_Distri=Name_Distri[0]
             
                         print("Nombre del distribuidor: ", Name_Distri)
-                            
                         if 'folio' not in distribuidor.columns:
-                            df = self.Distribuidores.Sell_Out(distribuidor, self.Distribuidores.Columnas)
+                            df, validv = self.Distribuidores.Sell_Out(distribuidor, self.Distribuidores.Columnas)
+                            print("Validación de fecha: ", validv)
+                            if validv == True:
+                                traceback.print_exc()
+                                print("Error al transformar los datos de Sell_Out.")
+                                self.error_fechas_format()
+                                return
                             
                             indice = ruta.rfind(".xlsx")
                             nueva_ruta = ruta[:indice]
@@ -668,8 +717,16 @@ class App(tk.Tk):
                         elif distribuidor[self.Distribuidores.Columnas[0]].isnull().any() or distribuidor[self.Distribuidores.Columnas[1]].isnull().any():
                             print("Columnas vacias ", self.Distribuidores.Columnas[0], " y ", self.Distribuidores.Columnas[1])
                             self.mostrar_error()
+                            print("Conlumna de fechas vacia.")
                         else:
-                            df = self.Distribuidores.Sell_Out(distribuidor, self.Distribuidores.Columnas)
+                            print("Validación de fecha: ", )
+                            df, validv = self.Distribuidores.Sell_Out(distribuidor, self.Distribuidores.Columnas)
+                            print("Validación de fecha: ", validv)
+                            if validv == True:
+                                traceback.print_exc()
+                                print("Error al transformar los datos de Sell_Out.")
+                                self.error_fechas_format()
+                                return
                             
                             indice = ruta.rfind(".xlsx")
                             nueva_ruta = ruta[:indice]
@@ -712,7 +769,13 @@ class App(tk.Tk):
                         print("Nombre del distribuidor: ", Name_Distri)
                             
                         if 'folio' not in distribuidor.columns:
-                            df = self.Distribuidores.Stocks(distribuidor, self.Distribuidores.Columnas_Stk)
+                            df, validv = self.Distribuidores.Stocks(distribuidor, self.Distribuidores.Columnas_Stk)
+                            if validv == True:
+                                traceback.print_exc()
+                                print("Error al transformar los datos de Sell_Out.")
+                                self.error_fechas_format()
+                                return
+                            
                             
                             indice = ruta.rfind(".xlsx")
                             nueva_ruta = ruta[:indice]
@@ -753,6 +816,9 @@ class App(tk.Tk):
             except ValueError as e5:
                 traceback.print_exc()
                 self.Cliente_Not_foud()
+            except PermissionError as e7:
+                traceback.print_exc()
+                self.archivo_abierto_e()
 
 
 
