@@ -45,7 +45,8 @@ class Distribuidor:
         # Condición para Ecuaquimica
         if int(distribuidor['clave_Distribuidor'][0])==61610097:
             # Generación de folio sintentico unicos.
-            distribuidor['folio'] = ""
+            print(distribuidor['fecha_Facturacion'])
+            # distribuidor['fecha_Facturacion'] = distribuidor['fecha_Facturacion'].str()            distribuidor['folio'] = ""
             # Casteamos y redondeamos los datos númericos.
             distribuidor[['Año', 'Mes', 'Dia']] = distribuidor['fecha_Facturacion'].str.split('-', expand=True)
             distribuidor['Mes'] = distribuidor['Mes'].astype(int) # año
@@ -83,7 +84,13 @@ class Distribuidor:
             distribuidor['linea_Producto'] = ""
             distribuidor['numero_Convenio'] = ""
             distribuidor['localidad']= ""
-            distribuidor['fecha_Facturacion'] = distribuidor['fecha_Facturacion'].astype(str)
+            distribuidor['fecha_Facturacion'] = distribuidor['fecha_Facturacion'].apply(self.convertir_fechas)
+            # distribuidor['fecha_Facturacion'] = distribuidor['fecha_Facturacion'].sort_values().apply(lambda x: x.strftime("%Y-%m-%d"))
+            if distribuidor['fecha_Facturacion'].isna().any():
+                validv = True
+            else:
+                validv = False
+                distribuidor['fecha_Facturacion'] = distribuidor['fecha_Facturacion'].sort_values().apply(lambda x: x.strftime("%Y-%m-%d"))
             distribuidor['rfc'] = distribuidor['rfc'].astype(str)
             columnas_deseadas = Columnas
         # Casp para Agripac
@@ -540,6 +547,13 @@ class App(tk.Tk):
         self.after(30000, self.cerrar_ventana)
         sys.exit()
         
+    def error_fechas_datetime(self):
+        self.withdraw()
+        messagebox.showerror("Error", "Formato de de la columna fecha facturación debe ser de tipo texto , el formato ingresado no es valido, por favor informa a los administradores.")
+        self.after(30000, self.cerrar_ventana)
+        sys.exit()
+    
+        
     # Funcion para mostrar error si no se creo el json correctamente:
     def error_json(self):
         self.withdraw()
@@ -686,15 +700,20 @@ class App(tk.Tk):
                                                 Columnas_Stk=[])
                     
                     if self.Distribuidores.Num_Distri == Num_Distri:
-                        print("Inicialización de transformación...")
-                        # Obtener el Nombre de distribuidor.
-                        self.ruta_base = "Base clientes.xlsx"
-                        # self.ruta_base = self.resource_path("Base clientes.xlsx")
-                        self.soldTo = pd.read_excel(self.ruta_base, sheet_name=0)
-                        print("Tipo de dato de Número de distribuidores: ", Num_Distri)
-                        Name_Distri_aux=self.soldTo[self.soldTo["Num_Distri"]==int(Num_Distri)]
-                        Name_Distri = list(Name_Distri_aux["Name_Distri"])
-                        Name_Distri=Name_Distri[0]
+                        try:
+                            print("Inicialización de transformación...")
+                            # Obtener el Nombre de distribuidor.
+                            self.ruta_base = "Base clientes.xlsx"
+                            # self.ruta_base = self.resource_path("Base clientes.xlsx")
+                            self.soldTo = pd.read_excel(self.ruta_base, sheet_name=0)
+                            print("Tipo de dato de Número de distribuidores: ", Num_Distri)
+                            Name_Distri_aux=self.soldTo[self.soldTo["Num_Distri"]==int(Num_Distri)]
+                            Name_Distri = list(Name_Distri_aux["Name_Distri"])
+                            print(int(Num_Distri))
+                            Name_Distri = Name_Distri[0]
+                        except IndexError:
+                            traceback.print_exc()
+                            self.Cliente_Not_foud()
             
                         print("Nombre del distribuidor: ", Name_Distri)
                         if 'folio' not in distribuidor.columns:
@@ -741,7 +760,8 @@ class App(tk.Tk):
                 else: # Proceso para Inventarios
                     print("Validación 2")
                     self.Distribuidores = Distribuidor(v_Num_Distri=Num_Distri, v_ruta=self.ruta,  Columnas=[],
-                                                        Columnas_Stk=['fecha_Inventario',
+                                                        Columnas_Stk=[
+                                                                    'fecha_Inventario',
                                                                     'linea_Negocio',
                                                                     'codeProduct_Distribuidor',
                                                                     'presentacion',
@@ -819,6 +839,9 @@ class App(tk.Tk):
             except PermissionError as e7:
                 traceback.print_exc()
                 self.archivo_abierto_e()
+            except AttributeError as e8:
+                traceback.print_exc()
+                self.error_fechas_datetime()
 
 
 
